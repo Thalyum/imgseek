@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+#
+# flash-img-seeker - Insert description here
+#
+# Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
+#
+#
+
+import hashlib
+import os
+import shutil
+import subprocess
+import sys
+
+from pathlib import Path
+
+name = sys.argv[1]
+srcdir = Path(os.environ['MESON_SOURCE_ROOT'])
+rootdir = Path(os.environ['MESON_BUILD_ROOT'])
+distdir = rootdir / 'custom-dist'
+destdir = distdir / name
+
+CARGO_CONFIG = '''
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+'''
+
+if distdir.exists():
+    shutil.rmtree(distdir)
+
+os.makedirs(destdir)
+
+print("Copying sources...")
+
+with open(srcdir / 'build-aux' / 'distributables.txt') as f:
+    distributables = [line.strip() for line in f]
+
+for p in map(lambda d: srcdir / d, distributables):
+    if p.is_dir():
+        shutil.copytree(p, destdir / p.name)
+    else:
+        shutil.copy(p, destdir / p.name)
+
+print("Vendoring crates...")
+
+cargodir = destdir / '.cargo'
+
+os.makedirs(cargodir)
+
+subprocess.check_call(['cargo', 'vendor', '-q', '--manifest-path',
+                       Path(srcdir) / 'Cargo.toml',
+                       destdir / 'vendor'])
+
+with open(cargodir / 'config', 'w') as w:
+    w.write(CARGO_CONFIG)
+
+print("Generating tarball...")
+
+tarball = shutil.make_archive(destdir, format='xztar', root_dir=distdir)
+
+print("Generated {}".format(tarball))
+
+digest = tarball + '.sha256sum'
+
+with open(tarball, 'rb') as r:
+    result = hashlib.sha256(r.read()).hexdigest()
+    with open(digest, 'w') as w:
+        w.write("{}\t{}".format(result, os.path.basename(tarball)))
+
+print("Generated {}".format(digest))

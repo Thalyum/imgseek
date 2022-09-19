@@ -1,0 +1,18 @@
+[package]
+name = "flash-img-seeker"
+edition = "2021"
+version = "0.1.1"
+authors = ["Paul-Erwan RIO <paulerwan.rio@proton.me>"]
+license = "None"
+homepage = "https://some/where"
+description = """
+Seeker tool for binaries in flash images
+"""
+
+[dependencies]
+clap = "2.33"
+thiserror = "1.0.31"
+anyhow = "1.0.59"
+
+[build-dependencies]
+clap = "2.33"

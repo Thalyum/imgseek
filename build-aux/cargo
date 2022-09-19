@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+#
+# flash-img-seeker - Insert description here
+#
+# Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
+#
+#
+
+import os
+import shutil
+import subprocess
+import sys
+
+srcdir, destdir, mode = sys.argv[1:4]
+
+args = ['cargo', 'build', '--manifest-path', os.path.join(srcdir, 'Cargo.toml')]
+if mode == 'release':
+    args.append('--release')
+
+subprocess.check_call(args, env=dict(os.environ,
+                                     CARGO_HOME=os.path.join(srcdir, 'target',
+                                                             'cargo-home')))
+
+shutil.copy(os.path.join(srcdir, 'target', mode, 'flash-img-seeker'), destdir)

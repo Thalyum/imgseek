@@ -1,0 +1,10 @@
+AUTHORS
+build-aux
+Cargo.lock
+Cargo.toml
+man
+meson.build
+meson_options.txt
+README.md
+shell-completion
+src
