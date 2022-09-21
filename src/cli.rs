@@ -29,4 +29,12 @@ pub fn build_cli() -> App<'static, 'static> {
                 .multiple(true)
                 .help("List of binaries to search for"),
         )
+        .arg(
+            Arg::with_name("bsize")
+                .short("s")
+                .long("size")
+                .takes_value(true)
+                .default_value("512")
+                .help("Page / block size"),
+        )
 }
