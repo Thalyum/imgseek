@@ -49,8 +49,6 @@ fn compute_hash_by_block(f: &File, block_size: usize) -> Result<Vec<ImgHashTable
         if size_r != block_size {
             if size_r == remaining {
                 if remaining != 0 {
-                    // fill the rest of the buffer with 0's
-                    // buffer[size_r..].iter_mut().map(|x| *x = 0).count();
                     buffer.truncate(remaining);
                 } else {
                     // EOF reached and all file processed

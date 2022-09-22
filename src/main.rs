@@ -9,8 +9,6 @@ mod cli;
 mod flash_img_seeker;
 
 use flash_img_seeker::*;
-use std::fs::File;
-use std::io::BufReader;
 
 fn main() -> anyhow::Result<()> {
     let matches = cli::build_cli().get_matches();

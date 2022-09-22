@@ -11,8 +11,6 @@ use thiserror::Error;
 pub enum Error {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("File is filled with 0: {0:?}")]
-    ZeroFile(std::ffi::OsString),
     #[error("Cannot read file")]
     ReadErr,
 }
