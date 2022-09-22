@@ -23,7 +23,6 @@ pub struct ImgHashTable {
     offset: usize,
     hash: u64,
     header: [u8; HEADER_SZ],
-    size: usize,
 }
 
 fn compute_hash<T: Hash>(t: &T) -> u64 {
@@ -68,7 +67,6 @@ fn compute_hash_by_block(f: &File, block_size: usize) -> Result<Vec<ImgHashTable
             offset,
             hash,
             header,
-            size: size_r,
         };
         table.push(hash_elem);
 
@@ -135,16 +133,14 @@ pub fn seek_image<P: AsRef<Path>>(
     flash_hash_table: &Vec<ImgHashTable>,
     image_path: P,
     block_size: usize,
-) -> Result<()> {
-    let bin_file = File::open(&image_path)?;
+) -> Result<Vec<usize>> {
+    let bin_file = File::open(image_path)?;
 
     let image_hash_table = compute_hash_by_block(&bin_file, block_size)?;
 
     let found = locate_image_in_table(flash_hash_table, &image_hash_table);
 
-    dbg!(found);
-
-    Ok(())
+    Ok(found)
 }
 
 pub fn process_flash_img<P: AsRef<Path>>(

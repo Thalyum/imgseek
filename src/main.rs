@@ -7,8 +7,11 @@
 
 mod cli;
 mod flash_img_seeker;
+mod puzzle;
 
-use flash_img_seeker::*;
+use flash_img_seeker::{process_flash_img, seek_image};
+use puzzle::{PuzzleDisplay, PuzzlePiece};
+use std::{convert::TryInto, fs};
 
 fn main() -> anyhow::Result<()> {
     let matches = cli::build_cli().get_matches();
@@ -22,9 +25,20 @@ fn main() -> anyhow::Result<()> {
 
     let flash_hash_table = process_flash_img(flash_img, bsize)?;
 
-    for binaries in bin_list {
-        seek_image(&flash_hash_table, &binaries, bsize)?;
+    let mut puzzle = PuzzleDisplay::new();
+
+    for binary_name in bin_list {
+        let valid_offsets = seek_image(&flash_hash_table, &binary_name, bsize)?;
+        let file_size = fs::metadata(&binary_name)?.len().try_into()?;
+
+        for offset in valid_offsets.iter() {
+            let p = PuzzlePiece::new(binary_name.to_owned(), file_size, *offset);
+
+            puzzle.add_element(p);
+        }
     }
+
+    println!("{:x?}", puzzle);
 
     Ok(())
 }
