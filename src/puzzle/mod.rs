@@ -5,8 +5,8 @@
 //
 //
 use std::fmt;
-use std::rc::Rc;
 
+#[derive(Debug, Clone)]
 pub struct PuzzlePiece {
     bin_name: String,
     bin_size: usize,
@@ -30,109 +30,179 @@ impl PuzzlePiece {
         self.bin_size
     }
 
-    fn get_name(&self) -> &str {
+    fn name(&self) -> &str {
         self.bin_name.as_str()
     }
-
-    // TODO
-    fn block_display(&self) -> String {
-        let width = self.bin_name.len() + 5;
-        let height = 3;
-
-        let mut border = String::with_capacity(width * height);
-
-        // top border
-        border.push('+');
-        for _ in 0..width - 3 {
-            border.push('-');
-        }
-        border.push('+');
-
-        // offset
-        border += format!(" <- {:#010x}\n", self.bin_offset).as_str();
-
-        // fill block name
-        border.push('|');
-        border.push(' ');
-        border.push_str(&self.bin_name);
-        border.push(' ');
-        border.push('|');
-        border.push('\n');
-
-        // bottom border
-        border.push('+');
-        for _ in 0..width - 3 {
-            border.push('-');
-        }
-        border.push('+');
-
-        // end offset
-        border += format!(" <- {:#010x}", self.bin_offset + self.bin_size).as_str();
-
-        border
-    }
 }
 
-impl fmt::Display for PuzzlePiece {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.block_display())
-    }
-}
-
-impl fmt::Debug for PuzzlePiece {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.block_display())
-    }
+#[derive(Debug, Clone, Copy)]
+struct DisplayInfo {
+    piece_index: usize,
+    column_index: usize,
 }
 
 #[derive(Debug)]
-enum DisplayElement {
-    Start(Rc<PuzzlePiece>),
-    End(Rc<PuzzlePiece>),
+enum DisplayEvent {
+    Start(DisplayInfo),
+    End(DisplayInfo),
+}
+
+impl DisplayEvent {
+    fn piece_index(&self) -> usize {
+        match self {
+            Self::Start(e) => e.piece_index,
+            Self::End(e) => e.piece_index,
+        }
+    }
+
+    fn display(&self) -> String {
+        match self {
+            Self::Start(_) => "--Start--".to_owned(),
+            Self::End(_) => "--End--".to_owned(),
+        }
+    }
+}
+
+impl fmt::Display for DisplayEvent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.display())
+    }
 }
 
 #[derive(Debug)]
 pub struct PuzzleDisplay {
-    inner: Vec<DisplayElement>,
+    inner: Vec<DisplayEvent>,
+    pieces: Vec<PuzzlePiece>,
 }
 
 impl PuzzleDisplay {
     pub fn new() -> PuzzleDisplay {
         PuzzleDisplay {
-            inner: Vec::<DisplayElement>::new(),
+            inner: Vec::<DisplayEvent>::new(),
+            pieces: Vec::<PuzzlePiece>::new(),
         }
     }
 
-    fn is_correct_index(e: &DisplayElement, offset: usize) -> bool {
+    fn get_piece_from_event(&self, event: &DisplayEvent) -> &PuzzlePiece {
+        &self.pieces[event.piece_index()]
+    }
+
+    fn is_offset_lt(&self, e: &DisplayEvent, offset: usize) -> bool {
         let elem_offset: usize = match e {
-            DisplayElement::Start(x) => x.start(),
-            DisplayElement::End(x) => x.start() + x.len(),
+            DisplayEvent::Start(_) => self.get_piece_from_event(e).start(),
+            DisplayEvent::End(_) => {
+                let piece = self.get_piece_from_event(e);
+                piece.start() + piece.len()
+            }
         };
         elem_offset > offset
     }
 
-    pub fn add_element(&mut self, new_piece: PuzzlePiece) -> () {
+    pub fn add_element(&mut self, new_piece: PuzzlePiece) {
         let start_addr = new_piece.start();
         let end_addr = start_addr + new_piece.len();
 
-        let new_piece_s = Rc::new(new_piece);
-        let new_piece_e = Rc::clone(&new_piece_s);
+        self.pieces.push(new_piece);
+        let piece_index = self.pieces.len() - 1;
 
-        let find_start = |e: &DisplayElement| PuzzleDisplay::is_correct_index(e, start_addr);
-        let find_end = |e: &DisplayElement| PuzzleDisplay::is_correct_index(e, end_addr);
+        let mut new_piece = DisplayInfo {
+            piece_index,
+            column_index: 0,
+        };
 
-        if let Some(i) = self.inner.iter().position(find_start) {
-            self.inner.insert(i, DisplayElement::Start(new_piece_s));
-            if let Some(j) = self.inner[i..].iter().position(find_end) {
-                self.inner.insert(i + j, DisplayElement::End(new_piece_e));
-            } else {
-                self.inner.push(DisplayElement::End(new_piece_e));
+        let mut start_index: Option<usize> = None;
+        let mut end_index: Option<usize> = None;
+        // search for where to insert the 'Start' of the puzzle piece
+        for (i, event) in self.inner.iter().enumerate() {
+            if self.is_offset_lt(event, start_addr) {
+                start_index = Some(i);
+                // search for where to insert the 'End' of the puzzle piece after the 'Start' one
+                for (j, event) in self.inner[i..].iter().enumerate() {
+                    if self.is_offset_lt(event, end_addr) {
+                        end_index = Some(i + j);
+                        break;
+                    }
+                }
+                break;
             }
-        } else {
-            self.inner.push(DisplayElement::Start(new_piece_s));
-            self.inner.push(DisplayElement::End(new_piece_e));
         }
 
-        ()
+        self.insert_piece(new_piece, start_index, end_index);
+    }
+
+    fn insert_piece(
+        &mut self,
+        new_piece: DisplayInfo,
+        start_index: Option<usize>,
+        end_index: Option<usize>,
+    ) {
+        let piece_start = DisplayEvent::Start(new_piece);
+        if let Some(index) = start_index {
+            self.inner.insert(index, piece_start);
+        } else {
+            self.inner.push(piece_start);
+        }
+        let piece_end = DisplayEvent::End(new_piece);
+        if let Some(index) = end_index {
+            self.inner.insert(index, piece_end);
+        } else {
+            self.inner.push(piece_end);
+        }
+    }
+
+    // fn compute_width(&mut self) {
+    //     let mut v: Vec<(usize, usize)> = Vec::new();
+    //     let mut n_start = 0;
+    //     let mut n_end = 0;
+    //     for elem in self.inner.iter() {
+    //         match elem {
+    //             DisplayEvent::Start(_) => n_start += 1,
+    //             DisplayEvent::End(_) => n_end += 1,
+    //         }
+    //         v.push((n_start, n_end));
+    //     }
+
+    //     assert_eq!(n_start, n_end);
+    //     assert_eq!(2 * n_start, self.inner.len());
+
+    //     self.availability = v.iter().map(|(a, b)| a - b).max().unwrap();
+    // }
+
+    // pub fn compute_all_indexes(&mut self) {
+    //     self.compute_width();
+    //     assert_ne!(self.availability, 0);
+
+    //     let mut availability = vec![0; self.availability];
+
+    //     for element in self.inner.iter_mut() {
+    //         if let DisplayEvent::Start(e) = element {
+    //             // Update 'Start' index
+    //             if let Some(index) = availability.iter().position(|&x| x == 0) {
+    //                 e.column_index = index;
+    //                 availability[index] = 1;
+    //             }
+    //             // // Update 'End' index, located after
+    //             // self.inner
+    //             //     .iter()
+    //             //     .position(|DisplayEvent::End(end)| end.inner == e.inner);
+    //         }
+    //     }
+    // }
+
+    fn display(&self) -> String {
+        let mut fmt = String::new();
+        for event in self.inner.iter() {
+            fmt = format!("{}{}\n{}\n", fmt, event, {
+                let piece = self.get_piece_from_event(event);
+                piece.name()
+            });
+        }
+        fmt
+    }
+}
+
+impl fmt::Display for PuzzleDisplay {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.display())
     }
 }
