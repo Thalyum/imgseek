@@ -13,6 +13,8 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("Cannot read file")]
     ReadErr,
+    #[error("Shape error: {0}")]
+    Shape(#[from] ndarray::ShapeError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -6,6 +6,7 @@
 //
 
 mod cli;
+mod error;
 mod flash_img_seeker;
 mod puzzle;
 

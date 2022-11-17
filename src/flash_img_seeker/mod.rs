@@ -4,10 +4,6 @@
 // Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 //
 //
-
-pub mod error;
-
-use error::*;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -15,6 +11,8 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::io::SeekFrom;
 use std::path::Path;
+
+use crate::error::*;
 
 const HEADER_SZ: usize = 16;
 
