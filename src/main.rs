@@ -25,8 +25,9 @@ fn main() -> anyhow::Result<()> {
     let bsize: usize = bsize.parse::<usize>()?;
 
     let flash_hash_table = process_flash_img(flash_img, bsize)?;
+    let flash_img_size = fs::metadata(flash_img)?.len();
 
-    let mut puzzle = PuzzleDisplay::new();
+    let mut puzzle = PuzzleDisplay::new(flash_img_size);
 
     for binary_name in bin_list {
         let valid_offsets = seek_image(&flash_hash_table, &binary_name, bsize)?;

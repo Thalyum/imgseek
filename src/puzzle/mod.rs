@@ -4,6 +4,9 @@
 // Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 //
 //
+mod parray;
+
+use parray::PArray;
 use std::fmt;
 
 #[derive(Debug, Clone)]
@@ -76,7 +79,10 @@ pub struct PuzzleDisplay {
 }
 
 impl PuzzleDisplay {
-    pub fn new() -> PuzzleDisplay {
+    pub fn new(image_size: u64) -> PuzzleDisplay {
+        let parray = PArray::new(image_size);
+        println!("{}", parray);
+
         PuzzleDisplay {
             inner: Vec::<DisplayEvent>::new(),
             pieces: Vec::<PuzzlePiece>::new(),
