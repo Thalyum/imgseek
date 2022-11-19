@@ -13,7 +13,8 @@ use std::{
 #[derive(Debug, Clone, Copy)]
 pub enum SlotStatus {
     Free,
-    Used,
+    Identity,
+    Used(usize),
 }
 
 impl SlotStatus {
@@ -30,40 +31,59 @@ impl SlotStatus {
     /// [`Used`]: SlotStatus::Used
     #[must_use]
     fn is_used(&self) -> bool {
-        matches!(self, Self::Used)
+        matches!(self, Self::Used(_))
+    }
+
+    /// Returns `true` if the slot status is [`Identity`].
+    ///
+    /// [`Identity`]: SlotStatus::Identity
+    #[must_use]
+    pub fn is_identity(&self) -> bool {
+        matches!(self, Self::Identity)
     }
 }
 
-// '+' implementation is a logical 'or'
-// Free + Free = Free
-// Free + Used = Used
-// Used + Free = Used
-// Used + Used = Used
+//    +     | Free     | Identity | Used(b) |
+// ---------+----------+----------+---------+
+// Free     | Free     | Identity | Used(b) |
+// Identity | Identity | Identity | Used(b) |
+// Used(a)  | Used(a)  | Used(a)  | Panics! |
 impl Add for SlotStatus {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        if rhs.is_free() && self.is_free() {
-            SlotStatus::Free
-        } else {
-            SlotStatus::Used
+        if rhs.is_used() && self.is_used() {
+            panic!("Cannot add Slotstatus::Used(a) with Slotstatus::Used(b)");
+        }
+        match self {
+            SlotStatus::Free => rhs,
+            _ => match rhs {
+                SlotStatus::Used(_) => rhs,
+                _ => self,
+            },
         }
     }
 }
 
-// '+' implementation is a logical 'and'
-// Free * Free = Free
-// Free * Used = Free
-// Used * Free = Free
-// Used * Used = Used
+//    *     | Free     | Identity | Used(b) |
+// ---------+----------+----------+---------+
+// Free     | Free     | Free     | Free    |
+// Identity | Free     | Identity | Used(b) |
+// Used(a)  | Free     | Used(a)  | Panics! |
 impl Mul for SlotStatus {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        if rhs.is_used() && self.is_used() {
-            SlotStatus::Used
-        } else {
-            SlotStatus::Free
+        match self {
+            SlotStatus::Free => SlotStatus::Free,
+            SlotStatus::Identity => rhs,
+            SlotStatus::Used(_) => match rhs {
+                SlotStatus::Free => SlotStatus::Free,
+                SlotStatus::Identity => self,
+                SlotStatus::Used(_) => {
+                    panic!("Cannot mul Slotstatus::Used(a) with Slotstatus::Used(b)")
+                }
+            },
         }
     }
 }
@@ -96,7 +116,7 @@ impl Zero for SlotStatus {
 // Implementation of 'One' trait
 impl One for SlotStatus {
     fn one() -> Self {
-        Self::Used
+        Self::Identity
     }
 
     fn is_one(&self) -> bool {
@@ -107,10 +127,10 @@ impl One for SlotStatus {
 // Implementation of 'Display' trait
 impl fmt::Display for SlotStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let symbol = match self {
-            SlotStatus::Free => "░",
-            SlotStatus::Used => "▓",
-        };
-        write!(f, "{}", symbol)
+        match self {
+            SlotStatus::Free => write!(f, "░"),
+            SlotStatus::Used(a) => write!(f, "{}", a),
+            SlotStatus::Identity => write!(f, "▓"),
+        }
     }
 }

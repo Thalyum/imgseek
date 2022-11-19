@@ -19,7 +19,7 @@ pub struct PArray {
 impl PArray {
     pub fn new(image_size: u64) -> Self {
         let shape = (2, 1);
-        let array: Array2<SlotStatus> = Array::zeros(shape);
+        let array: Array2<SlotStatus> = Array::ones(shape);
 
         let offset_list = vec![0, image_size as usize];
 
