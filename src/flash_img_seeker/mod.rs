@@ -120,6 +120,7 @@ fn locate_image_in_table(
                 // non-padded images (non-aligned images) of images padded
                 // with other values
                 found.push(flash_elem.offset);
+                // TODO: or maybe use a rolling hash ?
             }
         }
     }

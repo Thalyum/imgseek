@@ -22,7 +22,7 @@ impl SlotStatus {
     ///
     /// [`Free`]: SlotStatus::Free
     #[must_use]
-    fn is_free(&self) -> bool {
+    pub fn is_free(&self) -> bool {
         matches!(self, Self::Free)
     }
 
@@ -30,16 +30,8 @@ impl SlotStatus {
     ///
     /// [`Used`]: SlotStatus::Used
     #[must_use]
-    fn is_used(&self) -> bool {
+    pub fn is_used(&self) -> bool {
         matches!(self, Self::Used(_))
-    }
-
-    /// Returns `true` if the slot status is [`Identity`].
-    ///
-    /// [`Identity`]: SlotStatus::Identity
-    #[must_use]
-    pub fn is_identity(&self) -> bool {
-        matches!(self, Self::Identity)
     }
 }
 

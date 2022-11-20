@@ -36,14 +36,14 @@ fn main() -> anyhow::Result<()> {
         for offset in valid_offsets.iter() {
             let p = PuzzlePiece::new(binary_name.to_owned(), file_size, *offset);
 
-            puzzle.add_element(p);
+            puzzle.add_element(p)?;
         }
     }
 
     // puzzle.compute_all_indexes();
 
-    println!("{:x?}", puzzle);
-    println!("{}", puzzle);
+    // println!("{:x?}", puzzle);
+    // println!("{}", puzzle);
 
     Ok(())
 }

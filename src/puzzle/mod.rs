@@ -6,7 +6,8 @@
 //
 mod parray;
 
-use parray::PArray;
+use crate::error::*;
+use parray::PieceArray;
 use std::fmt;
 
 #[derive(Debug, Clone)]
@@ -76,16 +77,17 @@ impl fmt::Display for DisplayEvent {
 pub struct PuzzleDisplay {
     inner: Vec<DisplayEvent>,
     pieces: Vec<PuzzlePiece>,
+    parray: PieceArray,
 }
 
 impl PuzzleDisplay {
     pub fn new(image_size: u64) -> PuzzleDisplay {
-        let parray = PArray::new(image_size);
-        println!("{}", parray);
+        let parray = PieceArray::new(image_size);
 
         PuzzleDisplay {
             inner: Vec::<DisplayEvent>::new(),
             pieces: Vec::<PuzzlePiece>::new(),
+            parray,
         }
     }
 
@@ -104,12 +106,16 @@ impl PuzzleDisplay {
         elem_offset > offset
     }
 
-    pub fn add_element(&mut self, new_piece: PuzzlePiece) {
+    pub fn add_element(&mut self, new_piece: PuzzlePiece) -> Result<()> {
         let start_addr = new_piece.start();
         let end_addr = start_addr + new_piece.len();
 
         self.pieces.push(new_piece);
         let piece_index = self.pieces.len() - 1;
+
+        self.parray.add_offset(start_addr, piece_index)?;
+        self.parray.add_offset(end_addr, piece_index)?;
+        // println!("{}", self.parray);
 
         let mut new_piece = DisplayInfo {
             piece_index,
@@ -134,6 +140,7 @@ impl PuzzleDisplay {
         }
 
         self.insert_piece(new_piece, start_index, end_index);
+        Ok(())
     }
 
     fn insert_piece(

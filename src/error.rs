@@ -15,6 +15,8 @@ pub enum Error {
     ReadErr,
     #[error("Shape error: {0}")]
     Shape(#[from] ndarray::ShapeError),
+    #[error("Free column not found")]
+    FreeColNotFound,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
