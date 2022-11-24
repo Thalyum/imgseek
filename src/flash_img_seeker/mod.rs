@@ -4,10 +4,6 @@
 // Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 //
 //
-
-pub mod error;
-
-use error::*;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -16,6 +12,8 @@ use std::io::BufReader;
 use std::io::SeekFrom;
 use std::path::Path;
 
+use crate::error::*;
+
 const HEADER_SZ: usize = 16;
 
 #[derive(Debug)]
@@ -23,7 +21,6 @@ pub struct ImgHashTable {
     offset: usize,
     hash: u64,
     header: [u8; HEADER_SZ],
-    size: usize,
 }
 
 fn compute_hash<T: Hash>(t: &T) -> u64 {
@@ -68,7 +65,6 @@ fn compute_hash_by_block(f: &File, block_size: usize) -> Result<Vec<ImgHashTable
             offset,
             hash,
             header,
-            size: size_r,
         };
         table.push(hash_elem);
 
@@ -124,6 +120,7 @@ fn locate_image_in_table(
                 // non-padded images (non-aligned images) of images padded
                 // with other values
                 found.push(flash_elem.offset);
+                // TODO: or maybe use a rolling hash ?
             }
         }
     }
@@ -135,16 +132,14 @@ pub fn seek_image<P: AsRef<Path>>(
     flash_hash_table: &Vec<ImgHashTable>,
     image_path: P,
     block_size: usize,
-) -> Result<()> {
-    let bin_file = File::open(&image_path)?;
+) -> Result<Vec<usize>> {
+    let bin_file = File::open(image_path)?;
 
     let image_hash_table = compute_hash_by_block(&bin_file, block_size)?;
 
     let found = locate_image_in_table(flash_hash_table, &image_hash_table);
 
-    dbg!(found);
-
-    Ok(())
+    Ok(found)
 }
 
 pub fn process_flash_img<P: AsRef<Path>>(

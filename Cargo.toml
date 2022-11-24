@@ -13,6 +13,8 @@ Seeker tool for binaries in flash images
 clap = "2.33"
 thiserror = "1.0.31"
 anyhow = "1.0.59"
+ndarray = "0.15.6"
+num-traits = "0.2.15"
 
 [build-dependencies]
 clap = "2.33"
