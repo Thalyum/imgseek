@@ -7,7 +7,7 @@
 use num_traits::{identities::Zero, One};
 use std::{
     fmt,
-    ops::{Add, AddAssign, Mul, MulAssign},
+    ops::{Add, AddAssign, Div, Mul, MulAssign, Sub},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -73,10 +73,26 @@ impl Mul for SlotStatus {
                 SlotStatus::Free => SlotStatus::Free,
                 SlotStatus::Identity => self,
                 SlotStatus::Used(_) => {
-                    panic!("Cannot mul Slotstatus::Used(a) with Slotstatus::Used(b)")
+                    panic!("Cannot mul {:?} with {:?}", self, rhs)
                 }
             },
         }
+    }
+}
+
+impl Sub for SlotStatus {
+    type Output = Self;
+
+    fn sub(self, _rhs: Self) -> Self::Output {
+        panic!("SlotStatus: Why would you need to sub ?");
+    }
+}
+
+impl Div for SlotStatus {
+    type Output = Self;
+
+    fn div(self, _rhs: Self) -> Self::Output {
+        panic!("SlotStatus: Why would you need to div ?");
     }
 }
 
