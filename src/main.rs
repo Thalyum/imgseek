@@ -40,10 +40,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    // puzzle.compute_all_indexes();
-
-    // println!("{:x?}", puzzle);
-    // println!("{}", puzzle);
+    println!("{}", puzzle);
 
     Ok(())
 }
