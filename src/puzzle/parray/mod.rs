@@ -103,39 +103,34 @@ impl PieceArray {
         }
 
         if !duplicate.start {
-            self.insert_start_to_index(start_index.unwrap(), start)?;
+            self.insert_offset_at_index(start_index.unwrap(), start)?;
         }
         if !duplicate.end {
-            self.insert_end_to_index(end_index.unwrap(), end)?;
+            self.insert_offset_at_index(end_index.unwrap(), end)?;
         }
         Ok((start_index.unwrap(), end_index.unwrap()))
     }
 
-    fn insert_start_to_index(&mut self, index: usize, start: usize) -> Result<()> {
-        if index > 0 {
-            // copy previous row
-            let prev_row = self.array.row(index - 1).to_vec();
-            self.insert_row(index, Some(prev_row))?;
-        } else {
-            self.insert_row(index, None)?;
-        };
-        self.offset_list.insert(index, start);
+    fn insert_offset_at_index(&mut self, index: usize, offset: usize) -> Result<()> {
+        // we should never insert a new offset at 0:
+        // offset < 0 : impossible
+        // offset = 0 : duplicate => no insertion
+        assert_ne!(index, 0);
+        // get previous row
+        let prev_row = self.array.row(index - 1).to_vec();
+        // get next row
+        let next_row = self.array.row(index).to_vec();
+        let new_row = prev_row
+            .iter()
+            .zip(next_row.iter())
+            .map(|(&a, &b)| a ^ b)
+            .collect();
+        self.insert_row(index, new_row)?;
+        self.offset_list.insert(index, offset);
         Ok(())
     }
 
-    fn insert_end_to_index(&mut self, index: usize, end: usize) -> Result<()> {
-        if index < self.array.nrows() - 1 {
-            // copy next row
-            let prev_row = self.array.row(index + 1).to_vec();
-            self.insert_row(index, Some(prev_row))?;
-        } else {
-            self.insert_row(index, None)?;
-        };
-        self.offset_list.insert(index, end);
-        Ok(())
-    }
-
-    fn insert_row(&mut self, index: usize, row: Option<Vec<SlotStatus>>) -> Result<()> {
+    fn insert_row(&mut self, index: usize, row: Vec<SlotStatus>) -> Result<()> {
         // add a new row (bottom)
         self.push_row(row)?;
         // generate a row rotation matrix
@@ -146,12 +141,8 @@ impl PieceArray {
     }
 
     // add a new row at the bottom of the array
-    fn push_row(&mut self, row: Option<Vec<SlotStatus>>) -> Result<()> {
-        let vec = match row {
-            Some(vec) => vec,
-            None => vec![SlotStatus::Free; self.array.ncols()],
-        };
-        let new_row = ArrayView::from(&vec);
+    fn push_row(&mut self, row: Vec<SlotStatus>) -> Result<()> {
+        let new_row = ArrayView::from(&row);
         Ok(self.array.push_row(new_row)?)
     }
 
