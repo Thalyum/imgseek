@@ -7,7 +7,7 @@
 use num_traits::{identities::Zero, One};
 use std::{
     fmt,
-    ops::{Add, AddAssign, Div, Mul, MulAssign, Sub},
+    ops::{Add, AddAssign, BitXor, Div, Mul, MulAssign, Sub},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -77,6 +77,23 @@ impl Mul for SlotStatus {
                 }
             },
         }
+    }
+}
+
+// Used(a) ^ Used(a) = Used(a)
+// Free otherwise
+impl BitXor for SlotStatus {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        if let SlotStatus::Used(a) = self {
+            if let SlotStatus::Used(b) = rhs {
+                if a == b {
+                    return SlotStatus::Used(a);
+                }
+            }
+        }
+        SlotStatus::Free
     }
 }
 
