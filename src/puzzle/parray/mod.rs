@@ -86,13 +86,13 @@ impl PieceArray {
             }
         }
 
-        let start_index = self.insert_start_to_index(start_index, start)?;
-        let end_index = self.insert_end_to_index(end_index, end)?;
+        let start_index = self.insert_start_to_index(start_index.unwrap(), start)?;
+        let end_index = self.insert_end_to_index(end_index.unwrap(), end)?;
         Ok((start_index, end_index))
     }
 
-    fn insert_start_to_index(&mut self, index: Option<usize>, start: usize) -> Result<usize> {
-        let index_of_insertion = if let Some(index) = index {
+    fn insert_start_to_index(&mut self, index: usize, start: usize) -> Result<usize> {
+        let index_of_insertion = {
             if index > 0 {
                 // copy previous row
                 let prev_row = self.array.row(index - 1).to_vec();
@@ -102,16 +102,12 @@ impl PieceArray {
             };
             self.offset_list.insert(index, start);
             index
-        } else {
-            self.push_row(None)?;
-            self.offset_list.push(start);
-            self.array.nrows() - 1
         };
         Ok(index_of_insertion)
     }
 
-    fn insert_end_to_index(&mut self, index: Option<usize>, end: usize) -> Result<usize> {
-        let index_of_insertion = if let Some(index) = index {
+    fn insert_end_to_index(&mut self, index: usize, end: usize) -> Result<usize> {
+        let index_of_insertion = {
             if index < self.array.nrows() - 1 {
                 // copy next row
                 let prev_row = self.array.row(index + 1).to_vec();
@@ -121,10 +117,6 @@ impl PieceArray {
             };
             self.offset_list.insert(index, end);
             index
-        } else {
-            self.push_row(None)?;
-            self.offset_list.push(end);
-            self.array.nrows() - 1
         };
         Ok(index_of_insertion)
     }
