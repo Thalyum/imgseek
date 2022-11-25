@@ -72,13 +72,29 @@ impl PieceArray {
         // find index for row insertion
         let mut start_index: Option<usize> = None;
         let mut end_index: Option<usize> = None;
+
+        struct Duplicate {
+            start: bool,
+            end: bool,
+        }
+        let mut duplicate = Duplicate {
+            start: false,
+            end: false,
+        };
+
         for (i, &offset) in self.offset_list.iter().enumerate() {
             if offset >= start {
                 start_index = Some(i);
+                duplicate.start = offset == start;
                 // search for where to insert the 'End' of the puzzle piece after the 'Start' one
                 for (j, &offset) in self.offset_list[i..].iter().enumerate() {
                     if offset >= end {
-                        end_index = Some(i + j + 1);
+                        if !duplicate.start {
+                            end_index = Some(i + j + 1);
+                        } else {
+                            end_index = Some(i + j);
+                        }
+                        duplicate.end = offset == end;
                         break;
                     }
                 }
@@ -86,47 +102,37 @@ impl PieceArray {
             }
         }
 
-        let start_index = self.insert_start_to_index(start_index, start)?;
-        let end_index = self.insert_end_to_index(end_index, end)?;
-        Ok((start_index, end_index))
+        if !duplicate.start {
+            self.insert_start_to_index(start_index.unwrap(), start)?;
+        }
+        if !duplicate.end {
+            self.insert_end_to_index(end_index.unwrap(), end)?;
+        }
+        Ok((start_index.unwrap(), end_index.unwrap()))
     }
 
-    fn insert_start_to_index(&mut self, index: Option<usize>, start: usize) -> Result<usize> {
-        let index_of_insertion = if let Some(index) = index {
-            if index > 0 {
-                // copy previous row
-                let prev_row = self.array.row(index - 1).to_vec();
-                self.insert_row(index, Some(prev_row))?;
-            } else {
-                self.insert_row(index, None)?;
-            };
-            self.offset_list.insert(index, start);
-            index
+    fn insert_start_to_index(&mut self, index: usize, start: usize) -> Result<()> {
+        if index > 0 {
+            // copy previous row
+            let prev_row = self.array.row(index - 1).to_vec();
+            self.insert_row(index, Some(prev_row))?;
         } else {
-            self.push_row(None)?;
-            self.offset_list.push(start);
-            self.array.nrows() - 1
+            self.insert_row(index, None)?;
         };
-        Ok(index_of_insertion)
+        self.offset_list.insert(index, start);
+        Ok(())
     }
 
-    fn insert_end_to_index(&mut self, index: Option<usize>, end: usize) -> Result<usize> {
-        let index_of_insertion = if let Some(index) = index {
-            if index < self.array.nrows() - 1 {
-                // copy next row
-                let prev_row = self.array.row(index + 1).to_vec();
-                self.insert_row(index, Some(prev_row))?;
-            } else {
-                self.insert_row(index, None)?;
-            };
-            self.offset_list.insert(index, end);
-            index
+    fn insert_end_to_index(&mut self, index: usize, end: usize) -> Result<()> {
+        if index < self.array.nrows() - 1 {
+            // copy next row
+            let prev_row = self.array.row(index + 1).to_vec();
+            self.insert_row(index, Some(prev_row))?;
         } else {
-            self.push_row(None)?;
-            self.offset_list.push(end);
-            self.array.nrows() - 1
+            self.insert_row(index, None)?;
         };
-        Ok(index_of_insertion)
+        self.offset_list.insert(index, end);
+        Ok(())
     }
 
     fn insert_row(&mut self, index: usize, row: Option<Vec<SlotStatus>>) -> Result<()> {
