@@ -7,9 +7,8 @@
 mod parray;
 
 use crate::error::*;
-use ndarray::s;
 use parray::PieceArray;
-use std::fmt::{self, format};
+use std::fmt;
 use term_size;
 
 #[derive(Debug, Clone)]
