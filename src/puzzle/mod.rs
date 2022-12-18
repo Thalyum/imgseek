@@ -152,9 +152,10 @@ impl PuzzleDisplay {
             display.push_str(&piece_name);
         }
 
-        print!("{}", display);
+        // FIXME: temp debug
+        println!("{}", self.parray.array);
 
-        format!("{}", self.parray.array)
+        format!("{}", display)
     }
 }
 
