@@ -10,7 +10,7 @@ use std::{
     ops::{Add, AddAssign, BitXor, Div, Mul, MulAssign, Sub},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlotStatus {
     Free,
     Identity,

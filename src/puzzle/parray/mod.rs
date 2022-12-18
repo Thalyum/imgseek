@@ -13,8 +13,8 @@ use std::fmt;
 
 #[derive(Debug)]
 pub struct PieceArray {
-    array: Array2<SlotStatus>,
-    offset_list: Vec<usize>,
+    pub array: Array2<SlotStatus>,
+    pub offset_list: Vec<usize>,
 }
 
 impl PieceArray {
