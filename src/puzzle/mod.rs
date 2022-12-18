@@ -74,17 +74,21 @@ impl PuzzleDisplay {
     }
 
     pub fn display(&self) -> String {
-        let (term_w, term_h) = term_size::dimensions().unwrap();
-        let table_w = self.parray.array.ncols();
-        let table_h = self.parray.array.nrows();
+        // let (term_w, term_h) = term_size::dimensions().unwrap();
+        // let table_w = self.parray.array.ncols();
+        // let table_h = self.parray.array.nrows();
 
-        let display_w = std::cmp::min(term_w, table_w);
-        let display_h = std::cmp::min(term_h, table_h);
+        // let display_w = std::cmp::min(term_w, table_w);
+        // let display_h = std::cmp::min(term_h, table_h);
 
         let mut display = String::new();
-        self.display_create_top_border(display_w, &mut display);
-        self.display_create_lines(table_w, &mut display);
-        self.display_create_bottom_border(table_h, &mut display);
+        // handle top of table
+        self.display_create_top_border(&mut display);
+        // handle every line in between
+        self.display_create_lines(&mut display);
+        // handle bottom of table
+        self.display_create_bottom_border(&mut display);
+        // create footer images summary
         self.display_create_footer(&mut display);
 
         // FIXME: temp debug
@@ -101,12 +105,20 @@ impl PuzzleDisplay {
         (col_index + 1) % (total_width - 1) == 0
     }
 
-    fn display_create_lines(&self, table_w: usize, display: &mut String) {
-        for (n, win) in self.parray.array.windows((2, 2)).into_iter().enumerate() {
+    fn display_create_lines(&self, display: &mut String) {
+        let width = self.parray.array.ncols();
+        for (n, win) in self
+            .parray
+            .array
+            .windows((2, 2))
+            .into_iter()
+            .enumerate()
+            .skip(width - 1)
+        {
             let mut line = String::new();
 
             // start of line
-            if Self::is_start_of_line(n, table_w) {
+            if Self::is_start_of_line(n, width) {
                 line.push('│');
             }
 
@@ -120,11 +132,11 @@ impl PuzzleDisplay {
             line.push(c);
 
             // end of line
-            if Self::is_end_of_line(n, table_w) {
+            if Self::is_end_of_line(n, width) {
                 self.fill_column(right, corner, &mut line);
                 line.push('│');
                 {
-                    let line_index = n / (table_w - 1);
+                    let line_index = n / (width - 1);
                     let line_offset = self.parray.offset_list[line_index];
                     Self::display_append_offset_hint(&mut line, line_offset);
                 }
@@ -135,9 +147,9 @@ impl PuzzleDisplay {
         }
     }
 
-    fn display_create_bottom_border(&self, table_h: usize, display: &mut String) {
+    fn display_create_bottom_border(&self, display: &mut String) {
         let widen = self.horizontal_scale;
-        let last_row = self.parray.array.row(table_h - 1);
+        let last_row = self.parray.array.rows().into_iter().last().unwrap();
         let mut last_line = String::new();
         last_line.push('└');
         for win in last_row.windows(2) {
@@ -164,18 +176,24 @@ impl PuzzleDisplay {
         }
     }
 
-    fn display_create_top_border(&self, display_w: usize, display: &mut String) {
+    fn display_create_top_border(&self, display: &mut String) {
         let widen = self.horizontal_scale;
-        let mut tb_border = String::new();
-        tb_border.push('┌');
-        for _ in 0..display_w - 1 {
-            line_push_multiple(&mut tb_border, '─', widen + 1);
+        let first_row = self.parray.array.row(0);
+        let mut first_line = String::new();
+        first_line.push('┌');
+        for win in first_row.windows(2) {
+            let current = win[0];
+            let right = win[1];
+
+            line_push_multiple(&mut first_line, '─', self.horizontal_scale);
+            let c = if current != right { '┬' } else { '─' };
+            first_line.push(c);
         }
-        line_push_multiple(&mut tb_border, '─', widen);
-        tb_border.push('┐');
-        Self::display_append_offset_hint(&mut tb_border, self.parray.offset_list[0]);
-        tb_border.push('\n');
-        display.push_str(&tb_border);
+        line_push_multiple(&mut first_line, '─', widen);
+        first_line.push('┐');
+        Self::display_append_offset_hint(&mut first_line, self.parray.offset_list[0]);
+        first_line.push('\n');
+        display.push_str(&first_line);
     }
 
     fn display_append_offset_hint(str_line: &mut String, offset: usize) {
