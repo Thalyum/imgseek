@@ -4,7 +4,7 @@
 // Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 //
 //
-mod slot;
+pub mod slot;
 
 use crate::error::*;
 use ndarray::{Array, Array2, ArrayView};

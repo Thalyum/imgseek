@@ -33,6 +33,14 @@ impl SlotStatus {
     pub fn is_used(&self) -> bool {
         matches!(self, Self::Used(_))
     }
+
+    pub fn try_into_used(self) -> Result<usize, Self> {
+        if let Self::Used(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
 }
 
 //    +     | Free     | Identity | Used(b) |

@@ -7,7 +7,8 @@
 mod parray;
 
 use crate::error::*;
-use parray::PieceArray;
+use colored::Colorize;
+use parray::{slot::SlotStatus, PieceArray};
 use std::fmt;
 use term_size;
 
@@ -40,10 +41,15 @@ impl PuzzlePiece {
     }
 }
 
+const COLOR_LIST: [&str; 7] = ["red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+
 #[derive(Debug)]
 pub struct PuzzleDisplay {
     pieces: Vec<PuzzlePiece>,
     parray: PieceArray,
+    horizontal_scale: usize,
+    // TODO: add height multiplier
+    // vertical_scale: usize,
 }
 
 impl PuzzleDisplay {
@@ -53,6 +59,7 @@ impl PuzzleDisplay {
         PuzzleDisplay {
             pieces: Vec::<PuzzlePiece>::new(),
             parray,
+            horizontal_scale: 4,
         }
     }
 
@@ -74,14 +81,10 @@ impl PuzzleDisplay {
         let display_w = std::cmp::min(term_w, table_w);
         let display_h = std::cmp::min(term_h, table_h);
 
-        let widen: usize = 4;
-        // TODO: add height multiplier
-        // let highten: usize = 4;
-
         let mut display = String::new();
-        self.display_create_top_border(display_w, widen, &mut display);
-        self.display_create_lines(table_w, widen, &mut display);
-        self.display_create_bottom_border(table_h, widen, &mut display);
+        self.display_create_top_border(display_w, &mut display);
+        self.display_create_lines(table_w, &mut display);
+        self.display_create_bottom_border(table_h, &mut display);
         self.display_create_footer(&mut display);
 
         // FIXME: temp debug
@@ -98,8 +101,7 @@ impl PuzzleDisplay {
         (col_index + 1) % (total_width - 1) == 0
     }
 
-    fn display_create_lines(&self, table_w: usize, widen: usize, display: &mut String) {
-        // create "lines" of the array
+    fn display_create_lines(&self, table_w: usize, display: &mut String) {
         for (n, win) in self.parray.array.windows((2, 2)).into_iter().enumerate() {
             let mut line = String::new();
 
@@ -107,19 +109,19 @@ impl PuzzleDisplay {
             if Self::is_start_of_line(n, table_w) {
                 line.push('│');
             }
+
             let root = win[[0, 0]];
             let right = win[[0, 1]];
             let under = win[[1, 0]];
-            let c = if root != under { '_' } else { ' ' };
-            line_push_multiple(&mut line, c, widen);
+            let corner = win[[1, 1]];
+
+            self.fill_column(root, under, &mut line);
             let c = if root != right { '│' } else { ' ' };
             line.push(c);
 
             // end of line
             if Self::is_end_of_line(n, table_w) {
-                let corner = win[[1, 1]];
-                let c = if right != corner { '_' } else { ' ' };
-                line_push_multiple(&mut line, c, widen);
+                self.fill_column(right, corner, &mut line);
                 line.push('│');
                 {
                     let line_index = n / (table_w - 1);
@@ -133,14 +135,18 @@ impl PuzzleDisplay {
         }
     }
 
-    fn display_create_bottom_border(&self, table_h: usize, widen: usize, display: &mut String) {
+    fn display_create_bottom_border(&self, table_h: usize, display: &mut String) {
+        let widen = self.horizontal_scale;
         let last_row = self.parray.array.row(table_h - 1);
         let mut last_line = String::new();
         last_line.push('└');
         for win in last_row.windows(2) {
-            last_line.push('─');
-            let c = if win[0] != win[1] { '│' } else { '─' };
-            line_push_multiple(&mut last_line, c, widen);
+            let current = win[0];
+            let right = win[1];
+
+            line_push_multiple(&mut last_line, '─', self.horizontal_scale);
+            let c = if current != right { '┴' } else { '─' };
+            last_line.push(c);
         }
         line_push_multiple(&mut last_line, '─', widen);
         last_line.push('┘');
@@ -151,12 +157,15 @@ impl PuzzleDisplay {
 
     fn display_create_footer(&self, display: &mut String) {
         for (index, piece) in self.pieces.iter().enumerate() {
-            let piece_name = format!("{}: '{}'\n", index, &piece.name());
+            let color = COLOR_LIST[index % COLOR_LIST.len()];
+            let index_colored = index.to_string().color("black").on_color(color);
+            let piece_name = format!("{}: '{}'\n", index_colored.to_string(), &piece.name());
             display.push_str(&piece_name);
         }
     }
 
-    fn display_create_top_border(&self, display_w: usize, widen: usize, display: &mut String) {
+    fn display_create_top_border(&self, display_w: usize, display: &mut String) {
+        let widen = self.horizontal_scale;
         let mut tb_border = String::new();
         tb_border.push('┌');
         for _ in 0..display_w - 1 {
@@ -173,11 +182,27 @@ impl PuzzleDisplay {
         let offset_hint = format!(" <- {:#08x}", offset);
         str_line.push_str(&offset_hint);
     }
+
+    fn fill_column(&self, upper: SlotStatus, lower: SlotStatus, line: &mut String) {
+        let widen = self.horizontal_scale;
+        let bg_color = upper
+            .try_into_used()
+            .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
+            .unwrap_or("black");
+        let s = if upper != lower { "_" } else { " " }.on_color(bg_color);
+        line_push_str_multiple(line, s.to_string(), widen);
+    }
 }
 
 fn line_push_multiple(line: &mut String, c: char, amount: usize) {
     for _ in 0..amount {
         line.push(c);
+    }
+}
+
+fn line_push_str_multiple(line: &mut String, string: String, amount: usize) {
+    for _ in 0..amount {
+        line.push_str(&string);
     }
 }
 

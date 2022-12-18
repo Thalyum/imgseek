@@ -16,6 +16,7 @@ anyhow = "1.0.59"
 ndarray = "0.15.6"
 num-traits = "0.2.15"
 term_size = "0.3.2"
+colored = "2.0.0"
 
 [build-dependencies]
 clap = "2.33"
