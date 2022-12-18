@@ -9,7 +9,7 @@ mod parray;
 use crate::error::*;
 use ndarray::s;
 use parray::PieceArray;
-use std::fmt;
+use std::fmt::{self, format};
 use term_size;
 
 #[derive(Debug, Clone)]
@@ -146,6 +146,11 @@ impl PuzzleDisplay {
         last_line.push('┘');
         last_line.push('\n');
         display.push_str(&last_line);
+
+        for (index, piece) in self.pieces.iter().enumerate() {
+            let piece_name = format!("{}: '{}'\n", index, &piece.name());
+            display.push_str(&piece_name);
+        }
 
         print!("{}", display);
 
