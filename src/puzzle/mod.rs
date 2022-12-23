@@ -236,7 +236,7 @@ impl PuzzleDisplay {
                     self.fill_column(right, &mut line);
                     line.push('│');
                 }
-                let line_index = n / (width - 1);
+                let line_index = n / (width - 1) + 1;
                 let line_offset = self.parray.offset_list[line_index];
                 Self::display_append_offset_hint(&mut line, line_offset);
                 line.push('\n');
