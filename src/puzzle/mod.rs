@@ -8,6 +8,7 @@ mod parray;
 
 use crate::error::*;
 use colored::Colorize;
+use ndarray::{ArrayBase, Ix2, ViewRepr};
 use parray::{slot::SlotStatus, PieceArray};
 use std::fmt;
 use term_size;
@@ -78,16 +79,33 @@ impl Corner {
     }
 
     /// Check if the Corner can be used in this case, based on the list of SlotStatus around the corner.
-    /// The list must give the SlotStatus in a clockwise order:
-    /// [top_left, top_right, bottom_right, bottom_left]
-    fn is_usable_for(&self, slots: [SlotStatus; 4]) -> bool {
+    fn is_usable_for(&self, slots: ClockWiseSlots) -> bool {
         let template: [bool; 4] = [
-            slots[0] != slots[1],
-            slots[1] != slots[2],
-            slots[2] != slots[3],
-            slots[3] != slots[0],
+            slots.inner[0] != slots.inner[1],
+            slots.inner[1] != slots.inner[2],
+            slots.inner[2] != slots.inner[3],
+            slots.inner[3] != slots.inner[0],
         ];
         self.split.iter().zip(template.iter()).all(|(a, b)| a == b)
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ClockWiseSlots {
+    inner: [SlotStatus; 4],
+}
+
+impl TryFrom<ArrayBase<ViewRepr<&SlotStatus>, Ix2>> for ClockWiseSlots {
+    type Error = Error;
+
+    fn try_from(value: ArrayBase<ViewRepr<&SlotStatus>, Ix2>) -> Result<Self> {
+        if value.dim() != (2, 2) {
+            Err(Error::BadShape)
+        } else {
+            Ok(Self {
+                inner: [value[[0, 0]], value[[0, 1]], value[[1, 1]], value[[1, 0]]],
+            })
+        }
     }
 }
 
@@ -183,10 +201,8 @@ impl PuzzleDisplay {
         for (n, win) in self.parray.array.windows((2, 2)).into_iter().enumerate() {
             let mut line = String::new();
 
-            let root = win[[0, 0]];
-            let right = win[[0, 1]];
-            let under = win[[1, 0]];
-            let corner = win[[1, 1]];
+            let cwslots: ClockWiseSlots = win.try_into().unwrap();
+            let [root, right, corner, under] = cwslots.inner;
 
             // start of line
             if Self::is_start_of_line(n, width) {
@@ -203,12 +219,12 @@ impl PuzzleDisplay {
                 self.fill_column(root, &mut line);
             };
 
-            let x = self
+            let position = self
                 .corner_set
                 .iter()
-                .position(|c| c.is_usable_for([root, right, corner, under]))
+                .position(|c| c.is_usable_for(cwslots))
                 .unwrap();
-            let c = self.corner_set[x].c;
+            let c = self.corner_set[position].c;
             line.push(c);
 
             // end of line
