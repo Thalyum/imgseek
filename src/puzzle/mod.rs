@@ -41,6 +41,56 @@ impl PuzzlePiece {
     }
 }
 
+#[derive(Debug)]
+struct Corner {
+    // 'corner' unicode character to draw
+    c: char,
+    // clockwise (starting from top) list of edges that characterize the corner
+    split: [bool; 4],
+}
+
+impl Corner {
+    fn new(c: char) -> Self {
+        Self {
+            c,
+            split: [false, false, false, false],
+        }
+    }
+
+    fn set_top(mut self) -> Self {
+        self.split[0] = true;
+        self
+    }
+
+    fn set_right(mut self) -> Self {
+        self.split[1] = true;
+        self
+    }
+
+    fn set_bottom(mut self) -> Self {
+        self.split[2] = true;
+        self
+    }
+
+    fn set_left(mut self) -> Self {
+        self.split[3] = true;
+        self
+    }
+
+    /// Check if the Corner can be used in this case, based on the list of SlotStatus around the corner.
+    /// The list must give the SlotStatus in a clockwise order:
+    /// [top_left, top_right, bottom_right, bottom_left]
+    fn is_usable_for(&self, slots: [SlotStatus; 4]) -> bool {
+        let template: [bool; 4] = [
+            slots[0] != slots[1],
+            slots[1] != slots[2],
+            slots[2] != slots[3],
+            slots[3] != slots[0],
+        ];
+        self.split.iter().zip(template.iter()).all(|(a, b)| a == b)
+    }
+}
+
 const COLOR_LIST: [&str; 7] = ["red", "green", "yellow", "blue", "magenta", "cyan", "white"];
 
 #[derive(Debug)]
@@ -50,16 +100,36 @@ pub struct PuzzleDisplay {
     horizontal_scale: usize,
     // TODO: add height multiplier
     // vertical_scale: usize,
+    corner_set: [Corner; 11],
 }
 
 impl PuzzleDisplay {
     pub fn new(image_size: u64) -> PuzzleDisplay {
         let parray = PieceArray::new(image_size);
 
+        let corner_set: [Corner; 11] = [
+            Corner::new(' '),
+            Corner::new('│').set_top().set_bottom(),
+            Corner::new('┌').set_right().set_bottom(),
+            Corner::new('┐').set_bottom().set_left(),
+            Corner::new('└').set_top().set_right(),
+            Corner::new('┘').set_top().set_left(),
+            Corner::new('├').set_top().set_right().set_bottom(),
+            Corner::new('┤').set_top().set_bottom().set_left(),
+            Corner::new('┬').set_right().set_bottom().set_left(),
+            Corner::new('┴').set_top().set_right().set_left(),
+            Corner::new('┼')
+                .set_left()
+                .set_top()
+                .set_right()
+                .set_bottom(),
+        ];
+
         PuzzleDisplay {
             pieces: Vec::<PuzzlePiece>::new(),
             parray,
             horizontal_scale: 4,
+            corner_set,
         }
     }
 
@@ -93,6 +163,7 @@ impl PuzzleDisplay {
 
         // FIXME: temp debug
         println!("{}", self.parray.array);
+        println!("{:#x?}", self.parray.offset_list);
 
         format!("{}", display)
     }
@@ -106,40 +177,52 @@ impl PuzzleDisplay {
     }
 
     fn display_create_lines(&self, display: &mut String) {
-        let width = self.parray.array.ncols();
-        for (n, win) in self
-            .parray
-            .array
-            .windows((2, 2))
-            .into_iter()
-            .enumerate()
-            .skip(width - 1)
-        {
-            let mut line = String::new();
+        let widen = self.horizontal_scale;
 
-            // start of line
-            if Self::is_start_of_line(n, width) {
-                line.push('│');
-            }
+        let width = self.parray.array.ncols();
+        for (n, win) in self.parray.array.windows((2, 2)).into_iter().enumerate() {
+            let mut line = String::new();
 
             let root = win[[0, 0]];
             let right = win[[0, 1]];
             let under = win[[1, 0]];
             let corner = win[[1, 1]];
 
-            self.fill_column(root, under, &mut line);
-            let c = if root != right { '│' } else { ' ' };
+            // start of line
+            if Self::is_start_of_line(n, width) {
+                if root != under {
+                    line.push('├');
+                } else {
+                    line.push('│');
+                }
+            }
+
+            if root != under {
+                line_push_multiple(&mut line, '─', widen);
+            } else {
+                self.fill_column(root, &mut line);
+            };
+
+            let x = self
+                .corner_set
+                .iter()
+                .position(|c| c.is_usable_for([root, right, corner, under]))
+                .unwrap();
+            let c = self.corner_set[x].c;
             line.push(c);
 
             // end of line
             if Self::is_end_of_line(n, width) {
-                self.fill_column(right, corner, &mut line);
-                line.push('│');
-                {
-                    let line_index = n / (width - 1);
-                    let line_offset = self.parray.offset_list[line_index];
-                    Self::display_append_offset_hint(&mut line, line_offset);
+                if right != corner {
+                    line_push_multiple(&mut line, '─', widen);
+                    line.push('┤');
+                } else {
+                    self.fill_column(right, &mut line);
+                    line.push('│');
                 }
+                let line_index = n / (width - 1);
+                let line_offset = self.parray.offset_list[line_index];
+                Self::display_append_offset_hint(&mut line, line_offset);
                 line.push('\n');
             }
 
@@ -201,14 +284,19 @@ impl PuzzleDisplay {
         str_line.push_str(&offset_hint);
     }
 
-    fn fill_column(&self, upper: SlotStatus, lower: SlotStatus, line: &mut String) {
+    fn fill_column(&self, upper: SlotStatus, line: &mut String) {
         let widen = self.horizontal_scale;
-        let bg_color = upper
+        upper
             .try_into_used()
             .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-            .unwrap_or("black");
-        let s = if upper != lower { "_" } else { " " }.on_color(bg_color);
-        line_push_str_multiple(line, s.to_string(), widen);
+            .and_then(|color| {
+                Ok(line_push_str_multiple(
+                    line,
+                    " ".on_color(color).to_string(),
+                    widen,
+                ))
+            })
+            .unwrap_or_else(|_| line_push_multiple(line, ' ', widen));
     }
 }
 
