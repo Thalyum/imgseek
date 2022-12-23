@@ -8,7 +8,7 @@ mod parray;
 
 use crate::error::*;
 use colored::Colorize;
-use ndarray::{ArrayBase, Ix2, ViewRepr};
+use ndarray::{ArrayBase, Ix1, Ix2, ViewRepr};
 use parray::{slot::SlotStatus, PieceArray};
 use std::fmt;
 use term_size;
@@ -78,6 +78,18 @@ impl Corner {
         self
     }
 
+    fn has_bottom(&self) -> bool {
+        self.split[2]
+    }
+
+    fn has_right(&self) -> bool {
+        self.split[1]
+    }
+
+    fn has_left(&self) -> bool {
+        self.split[3]
+    }
+
     /// Check if the Corner can be used in this case, based on the list of SlotStatus around the corner.
     fn is_usable_for(&self, slots: ClockWiseSlots) -> bool {
         let template: [bool; 4] = [
@@ -106,6 +118,41 @@ impl TryFrom<ArrayBase<ViewRepr<&SlotStatus>, Ix2>> for ClockWiseSlots {
                 inner: [value[[0, 0]], value[[0, 1]], value[[1, 1]], value[[1, 0]]],
             })
         }
+    }
+}
+
+type Custom<'a> = ArrayBase<ViewRepr<&'a SlotStatus>, Ix1>;
+
+impl TryFrom<(Custom<'_>, Custom<'_>)> for ClockWiseSlots {
+    type Error = Error;
+
+    fn try_from(value: (Custom<'_>, Custom<'_>)) -> Result<Self> {
+        if value.0.dim() != (2) || value.1.dim() != (2) {
+            Err(Error::BadShape)
+        } else {
+            Ok(Self {
+                inner: [value.0[[0]], value.1[[0]], value.1[[1]], value.0[[1]]],
+            })
+        }
+    }
+}
+
+// https://stackoverflow.com/questions/54756166/how-do-i-efficiently-iterate-through-a-vecvect-row-by-row
+struct DynamicZip<I>
+where
+    I: Iterator,
+{
+    iterators: Vec<I>,
+}
+
+impl<I, T> Iterator for DynamicZip<I>
+where
+    I: Iterator<Item = T>,
+{
+    type Item = Vec<T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let output: Option<Vec<T>> = self.iterators.iter_mut().map(|iter| iter.next()).collect();
+        output
     }
 }
 
@@ -168,16 +215,89 @@ impl PuzzleDisplay {
 
         // let display_w = std::cmp::min(term_w, table_w);
         // let display_h = std::cmp::min(term_h, table_h);
+        let array = &self.parray.array;
+
+        let mut display_vec = Vec::<Vec<String>>::new();
+        // create each 'filled' columns
+        for col in array.columns().into_iter() {
+            let mut display_col = Vec::<String>::new();
+            // process first slot
+            let c = if col[0].is_used() {
+                col[0]
+                    .try_into_used()
+                    .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
+                    .and_then(|color| Ok(" ".on_color(color)))
+                    .unwrap()
+                    .to_string()
+            } else {
+                " ".to_string()
+            };
+            display_col.push(c);
+            // process the rest of the column, by taking care of slot transitions
+            for slot in col.into_iter() {
+                let c = if slot.is_used() {
+                    slot.try_into_used()
+                        .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
+                        .and_then(|color| Ok(" ".on_color(color)))
+                        .unwrap()
+                        .to_string()
+                } else {
+                    " ".to_string()
+                };
+                display_col.push(c);
+            }
+            display_vec.push(display_col);
+        }
+        // create each 'edge' columns
+        let mut col_iter = array.columns().into_iter().enumerate().peekable();
+        while let Some((_, col)) = col_iter.next() {
+            if let Some((idx, next_col)) = col_iter.peek() {
+                let mut display_col = Vec::<String>::new();
+                // process first slot
+                if col[0].is_used() || next_col[0].is_used() {
+                    display_col.push("┬".to_string());
+                } else {
+                    display_col.push(" ".to_string());
+                }
+                for x in col
+                    .windows(2)
+                    .into_iter()
+                    .zip(next_col.windows(2).into_iter())
+                {
+                    let cwslots: ClockWiseSlots = x.try_into().unwrap();
+                    let position = self
+                        .corner_set
+                        .iter()
+                        .position(|c| c.is_usable_for(cwslots))
+                        .unwrap();
+                    let corner = &self.corner_set[position];
+                    display_col.push(String::from(corner.c));
+                    // take into account the clot transition
+                    // if corner.has_right() || corner.has_left() {
+                    //     if corner.has_bottom() {
+                    //         display_col.push("│".to_string());
+                    //     } else {
+                    //         display_col.push(" ".to_string());
+                    //     }
+                    // }
+                }
+                display_vec.insert(*idx, display_col);
+            }
+        }
+        // add 'transition' characters
+        // we need to work by rows this time, as we want to extend every column at the same time.
+        let iterators: Vec<_> = display_vec.into_iter().map(|col| col.into_iter()).collect();
+        let dz = DynamicZip { iterators };
+        for row in dz {
+            // dbg!(row);
+        }
+        // for _ in 0..array.nrows() {
+        //     let row: Vec<_> = iterators.iter().map(|c| c.next().unwrap()).collect();
+        //     dbg!(row);
+        // }
+        // dbg!(display_vec);
 
         let mut display = String::new();
-        // handle top of table
-        self.display_create_top_border(&mut display);
-        // handle every line in between
-        self.display_create_lines(&mut display);
-        // handle bottom of table
-        self.display_create_bottom_border(&mut display);
-        // create footer images summary
-        self.display_create_footer(&mut display);
 
         // FIXME: temp debug
         println!("{}", self.parray.array);
