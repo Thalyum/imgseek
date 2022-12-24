@@ -78,18 +78,6 @@ impl Corner {
         self
     }
 
-    fn has_bottom(&self) -> bool {
-        self.split[2]
-    }
-
-    fn has_right(&self) -> bool {
-        self.split[1]
-    }
-
-    fn has_left(&self) -> bool {
-        self.split[3]
-    }
-
     /// Check if the Corner can be used in this case, based on the list of SlotStatus around the corner.
     fn is_usable_for(&self, slots: ClockWiseSlots) -> bool {
         let template: [bool; 4] = [
@@ -362,87 +350,8 @@ impl PuzzleDisplay {
             display.push_str(&line);
         }
 
+        self.display_create_footer(&mut display);
         format!("{}", display)
-    }
-
-    fn is_start_of_line(col_index: usize, total_width: usize) -> bool {
-        col_index % (total_width - 1) == 0
-    }
-
-    fn is_end_of_line(col_index: usize, total_width: usize) -> bool {
-        (col_index + 1) % (total_width - 1) == 0
-    }
-
-    fn display_create_lines(&self, display: &mut String) {
-        let widen = self.horizontal_scale;
-
-        let width = self.parray.array.ncols();
-        for (n, win) in self.parray.array.windows((2, 2)).into_iter().enumerate() {
-            let mut line = String::new();
-
-            let cwslots: ClockWiseSlots = win.try_into().unwrap();
-            let [root, right, corner, under] = cwslots.inner;
-
-            // start of line
-            if Self::is_start_of_line(n, width) {
-                if root != under {
-                    line.push('├');
-                } else {
-                    line.push('│');
-                }
-            }
-
-            if root != under {
-                line_push_multiple(&mut line, '─', widen);
-            } else {
-                self.fill_column(root, &mut line);
-            };
-
-            let position = self
-                .corner_set
-                .iter()
-                .position(|c| c.is_usable_for(cwslots))
-                .unwrap();
-            let c = self.corner_set[position].c;
-            line.push(c);
-
-            // end of line
-            if Self::is_end_of_line(n, width) {
-                if right != corner {
-                    line_push_multiple(&mut line, '─', widen);
-                    line.push('┤');
-                } else {
-                    self.fill_column(right, &mut line);
-                    line.push('│');
-                }
-                let line_index = n / (width - 1) + 1;
-                let line_offset = self.parray.offset_list[line_index];
-                Self::display_append_offset_hint(&mut line, line_offset);
-                line.push('\n');
-            }
-
-            display.push_str(&line);
-        }
-    }
-
-    fn display_create_bottom_border(&self, display: &mut String) {
-        let widen = self.horizontal_scale;
-        let last_row = self.parray.array.rows().into_iter().last().unwrap();
-        let mut last_line = String::new();
-        last_line.push('└');
-        for win in last_row.windows(2) {
-            let current = win[0];
-            let right = win[1];
-
-            line_push_multiple(&mut last_line, '─', self.horizontal_scale);
-            let c = if current != right { '┴' } else { '─' };
-            last_line.push(c);
-        }
-        line_push_multiple(&mut last_line, '─', widen);
-        last_line.push('┘');
-        Self::display_append_offset_hint(&mut last_line, *self.parray.offset_list.last().unwrap());
-        last_line.push('\n');
-        display.push_str(&last_line);
     }
 
     fn display_create_footer(&self, display: &mut String) {
@@ -452,58 +361,6 @@ impl PuzzleDisplay {
             let piece_name = format!("{}: '{}'\n", index_colored.to_string(), &piece.name());
             display.push_str(&piece_name);
         }
-    }
-
-    fn display_create_top_border(&self, display: &mut String) {
-        let widen = self.horizontal_scale;
-        let first_row = self.parray.array.row(0);
-        let mut first_line = String::new();
-        first_line.push('┌');
-        for win in first_row.windows(2) {
-            let current = win[0];
-            let right = win[1];
-
-            line_push_multiple(&mut first_line, '─', self.horizontal_scale);
-            let c = if current != right { '┬' } else { '─' };
-            first_line.push(c);
-        }
-        line_push_multiple(&mut first_line, '─', widen);
-        first_line.push('┐');
-        Self::display_append_offset_hint(&mut first_line, self.parray.offset_list[0]);
-        first_line.push('\n');
-        display.push_str(&first_line);
-    }
-
-    fn display_append_offset_hint(str_line: &mut String, offset: usize) {
-        let offset_hint = format!(" <- {:#08x}", offset);
-        str_line.push_str(&offset_hint);
-    }
-
-    fn fill_column(&self, upper: SlotStatus, line: &mut String) {
-        let widen = self.horizontal_scale;
-        upper
-            .try_into_used()
-            .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-            .and_then(|color| {
-                Ok(line_push_str_multiple(
-                    line,
-                    " ".on_color(color).to_string(),
-                    widen,
-                ))
-            })
-            .unwrap_or_else(|_| line_push_multiple(line, ' ', widen));
-    }
-}
-
-fn line_push_multiple(line: &mut String, c: char, amount: usize) {
-    for _ in 0..amount {
-        line.push(c);
-    }
-}
-
-fn line_push_str_multiple(line: &mut String, string: String, amount: usize) {
-    for _ in 0..amount {
-        line.push_str(&string);
     }
 }
 
