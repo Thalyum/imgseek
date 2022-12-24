@@ -209,6 +209,10 @@ impl PuzzleDisplay {
     }
 
     pub fn display(&self) -> String {
+        // FIXME: temp debug
+        println!("{}", self.parray.array);
+        println!("{:#x?}", self.parray.offset_list);
+
         // let (term_w, term_h) = term_size::dimensions().unwrap();
         // let table_w = self.parray.array.ncols();
         // let table_h = self.parray.array.nrows();
@@ -298,10 +302,6 @@ impl PuzzleDisplay {
         // dbg!(display_vec);
 
         let mut display = String::new();
-
-        // FIXME: temp debug
-        println!("{}", self.parray.array);
-        println!("{:#x?}", self.parray.offset_list);
 
         format!("{}", display)
     }

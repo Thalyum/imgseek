@@ -19,13 +19,13 @@ pub struct PieceArray {
 
 impl PieceArray {
     pub fn new(image_size: u64) -> Self {
-        let shape = (2, 1);
+        let shape = (1, 1);
         let array: Array2<SlotStatus> = Array::zeros(shape);
 
         let offset_list = vec![0, image_size as usize];
 
-        // replace assert by unit tests
-        assert_eq!(offset_list.len(), array.shape()[0]);
+        // FIXME: replace assert by unit tests
+        assert_eq!(offset_list.len(), array.shape()[0] + 1);
 
         Self { array, offset_list }
     }
@@ -44,17 +44,17 @@ impl PieceArray {
         };
 
         let mut new_col = self.array.column_mut(col_index);
-        for i in start_index..=end_index {
+        for i in start_index..end_index {
             new_col[i] = SlotStatus::Used(piece_index);
         }
 
         // TODO: replace assert by unit tests
-        Ok(assert_eq!(self.array.nrows(), self.offset_list.len()))
+        Ok(assert_eq!(self.array.nrows() + 1, self.offset_list.len()))
     }
 
     fn find_empty_column(&self, start_index: usize, end_index: usize) -> Result<usize> {
         // size of the piece to add
-        let length = end_index - start_index + 1;
+        let length = end_index - start_index;
         // search for enough 'Free' slots among the available columns
         match self.array.columns().into_iter().position(|column| {
             column
@@ -115,16 +115,15 @@ impl PieceArray {
         // we should never insert a new offset at 0:
         // offset < 0 : impossible
         // offset = 0 : duplicate => no insertion
-        assert_ne!(index, 0);
+        // TODO: replace by unit test ?
+        assert!(index > 0);
+        // Duplicate the previous row. If the row content was valid for [a,b]
+        // then it will also be valid for [a,c] since c < b.
         // get previous row
         let prev_row = self.array.row(index - 1).to_vec();
-        // get next row
-        let next_row = self.array.row(index).to_vec();
-        let new_row = prev_row
-            .iter()
-            .zip(next_row.iter())
-            .map(|(&a, &b)| a ^ b)
-            .collect();
+        // clone it
+        let new_row = prev_row.clone();
+        // and insert it
         self.insert_row(index, new_row)?;
         self.offset_list.insert(index, offset);
         Ok(())
@@ -133,10 +132,13 @@ impl PieceArray {
     fn insert_row(&mut self, index: usize, row: Vec<SlotStatus>) -> Result<()> {
         // add a new row (bottom)
         self.push_row(row)?;
-        // generate a row rotation matrix
-        let rot = self.gen_rotate1_back_matrix(index)?;
-        // rotate the matrix' rows to put the new row at the desired index
-        self.array = rot.dot(&self.array);
+        // do not bother if we want to add a row at the end
+        if index != self.array.nrows() - 1 {
+            // generate a row rotation matrix
+            let rot = self.gen_rotate1_back_matrix(index)?;
+            // rotate the matrix' rows to put the new row at the desired index
+            self.array = rot.dot(&self.array);
+        }
         Ok(())
     }
 
