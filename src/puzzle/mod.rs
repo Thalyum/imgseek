@@ -207,7 +207,8 @@ impl PuzzleDisplay {
     fn display_create(&self, display_vec: Vec<Vec<String>>) -> String {
         // create display, line by line, we need to work by rows this time.
         let mut display = String::new();
-        // add the first & last characters manually, as they correspond to the left & right border of the table.
+        // add the first & last characters manually
+        // as they correspond to the left & right border of the table.
         let last_idx = display_vec.first().unwrap().len() - 1;
         let iterators: Vec<_> = display_vec.into_iter().map(|col| col.into_iter()).collect();
         let dz = DynamicZip { iterators };
@@ -242,6 +243,9 @@ impl PuzzleDisplay {
                 line.push('┤');
             } else {
                 line.push('│');
+            }
+            if n % 2 == 0 {
+                line.push_str(&format!(" <-- {:#08x}", self.parray.offset_list[n / 2]));
             }
             line.push('\n');
             display.push_str(&line);
