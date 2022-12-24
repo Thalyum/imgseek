@@ -225,50 +225,81 @@ impl PuzzleDisplay {
         // create each 'filled' columns
         for col in array.columns().into_iter() {
             let mut display_col = Vec::<String>::new();
-            // process first slot
-            let c = if col[0].is_used() {
-                col[0]
-                    .try_into_used()
-                    .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-                    .and_then(|color| Ok(" ".on_color(color)))
-                    .unwrap()
-                    .to_string()
-            } else {
-                " ".to_string()
-            };
-            display_col.push(c);
-            // process the rest of the column, by taking care of slot transitions
-            for slot in col.into_iter() {
-                let c = if slot.is_used() {
-                    slot.try_into_used()
+            // begin by top border
+            display_col.push("─".to_string());
+            // process the column by windows. Each row implies two new strings:
+            // - one for the cell being processed
+            // - one for the cell transition.
+            for win in col.windows(2) {
+                // process cell
+                let cell = win[0];
+                display_col.push(if cell.is_used() {
+                    cell.try_into_used()
                         .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
                         .and_then(|color| Ok(" ".on_color(color)))
                         .unwrap()
                         .to_string()
                 } else {
                     " ".to_string()
-                };
-                display_col.push(c);
+                });
+                // process cell transition
+                let n_cell = win[1];
+                display_col.push(if cell == n_cell {
+                    if cell.is_used() {
+                        cell.try_into_used()
+                            .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
+                            .and_then(|color| Ok(" ".on_color(color)))
+                            .unwrap()
+                            .to_string()
+                    } else {
+                        " ".to_string()
+                    }
+                } else {
+                    "─".to_string()
+                });
             }
+            // process last cell
+            let cell = col.last().unwrap();
+            display_col.push(if cell.is_used() {
+                cell.try_into_used()
+                    .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
+                    .and_then(|color| Ok(" ".on_color(color)))
+                    .unwrap()
+                    .to_string()
+            } else {
+                " ".to_string()
+            });
+            // end by bottom border
+            display_col.push("─".to_string());
+            // and finish the column !
             display_vec.push(display_col);
         }
         // create each 'edge' columns
         let mut col_iter = array.columns().into_iter().enumerate().peekable();
-        while let Some((_, col)) = col_iter.next() {
-            if let Some((idx, next_col)) = col_iter.peek() {
+        while let Some((n, column)) = col_iter.next() {
+            // n is the number of 'edge' columns that we have processed
+            if let Some((_, n_column)) = col_iter.peek() {
                 let mut display_col = Vec::<String>::new();
-                // process first slot
-                if col[0].is_used() || next_col[0].is_used() {
+                // begin by top border
+                if column.first().unwrap().is_used() || n_column.first().unwrap().is_used() {
                     display_col.push("┬".to_string());
                 } else {
-                    display_col.push(" ".to_string());
+                    display_col.push("─".to_string());
                 }
-                for x in col
+                for x in column
                     .windows(2)
                     .into_iter()
-                    .zip(next_col.windows(2).into_iter())
+                    .zip(n_column.windows(2).into_iter())
                 {
                     let cwslots: ClockWiseSlots = x.try_into().unwrap();
+                    let [cell_tl, cell_tr, _, _] = cwslots.inner;
+                    // process cell vertical edge
+                    display_col.push(if cell_tl.is_used() || cell_tr.is_used() {
+                        "│".to_string()
+                    } else {
+                        " ".to_string()
+                    });
+                    // process cell transition edge
                     let position = self
                         .corner_set
                         .iter()
@@ -276,32 +307,60 @@ impl PuzzleDisplay {
                         .unwrap();
                     let corner = &self.corner_set[position];
                     display_col.push(String::from(corner.c));
-                    // take into account the clot transition
-                    // if corner.has_right() || corner.has_left() {
-                    //     if corner.has_bottom() {
-                    //         display_col.push("│".to_string());
-                    //     } else {
-                    //         display_col.push(" ".to_string());
-                    //     }
-                    // }
                 }
-                display_vec.insert(*idx, display_col);
+                // process last cell & bottom border
+                if column.last().unwrap().is_used() || n_column.last().unwrap().is_used() {
+                    display_col.push("│".to_string());
+                    display_col.push("┴".to_string());
+                } else {
+                    display_col.push(" ".to_string());
+                    display_col.push("─".to_string());
+                }
+                // and finish the column !
+                display_vec.insert(2 * n + 1, display_col);
             }
         }
-        // add 'transition' characters
-        // we need to work by rows this time, as we want to extend every column at the same time.
+        // create display, line by line, we need to work by rows this time.
+        let mut display = String::new();
+        // add the first & last characters manually, as they correspond to the left & right border of the table.
+        let last_idx = display_vec.first().unwrap().len() - 1;
         let iterators: Vec<_> = display_vec.into_iter().map(|col| col.into_iter()).collect();
         let dz = DynamicZip { iterators };
-        for row in dz {
-            // dbg!(row);
+        for (n, row) in dz.enumerate() {
+            let mut line = String::new();
+            // begin by left border
+            if n == 0 {
+                line.push('┌');
+            } else if n == last_idx {
+                line.push('└');
+            } else if row.first().unwrap() == "─" {
+                line.push('├');
+            } else {
+                line.push('│');
+            }
+            // add the row content
+            for (n, s) in row.iter().enumerate() {
+                if n % 2 == 0 {
+                    for _ in 0..self.horizontal_scale {
+                        line.push_str(&s);
+                    }
+                } else {
+                    line.push_str(&s);
+                }
+            }
+            // finish by right border
+            if n == 0 {
+                line.push('┐');
+            } else if n == last_idx {
+                line.push('┘');
+            } else if row.last().unwrap() == "─" {
+                line.push('┤');
+            } else {
+                line.push('│');
+            }
+            line.push('\n');
+            display.push_str(&line);
         }
-        // for _ in 0..array.nrows() {
-        //     let row: Vec<_> = iterators.iter().map(|c| c.next().unwrap()).collect();
-        //     dbg!(row);
-        // }
-        // dbg!(display_vec);
-
-        let mut display = String::new();
 
         format!("{}", display)
     }
