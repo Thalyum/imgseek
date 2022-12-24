@@ -207,11 +207,20 @@ impl PuzzleDisplay {
 
         // let display_w = std::cmp::min(term_w, table_w);
         // let display_h = std::cmp::min(term_h, table_h);
-        let array = &self.parray.array;
+        let mut display_vec = self.process_columns();
+        // create each 'edge' columns
+        self.insert_edges(&mut display_vec);
+        // create display String
+        let mut display = self.display_create(display_vec);
+        // add footer
+        self.display_create_footer(&mut display);
+        format!("{}", display)
+    }
 
+    fn process_columns(&self) -> Vec<Vec<String>> {
         let mut display_vec = Vec::<Vec<String>>::new();
         // create each 'filled' columns
-        for col in array.columns().into_iter() {
+        for col in (&self.parray.array).columns().into_iter() {
             let mut display_col = Vec::<String>::new();
             // begin by top border
             display_col.push("─".to_string());
@@ -221,49 +230,33 @@ impl PuzzleDisplay {
             for win in col.windows(2) {
                 // process cell
                 let cell = win[0];
-                display_col.push(if cell.is_used() {
-                    cell.try_into_used()
-                        .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-                        .and_then(|color| Ok(" ".on_color(color)))
-                        .unwrap()
-                        .to_string()
-                } else {
-                    " ".to_string()
-                });
+                display_col.push(slot_to_colored(cell));
                 // process cell transition
                 let n_cell = win[1];
                 display_col.push(if cell == n_cell {
-                    if cell.is_used() {
-                        cell.try_into_used()
-                            .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-                            .and_then(|color| Ok(" ".on_color(color)))
-                            .unwrap()
-                            .to_string()
-                    } else {
-                        " ".to_string()
-                    }
+                    slot_to_colored(cell)
                 } else {
                     "─".to_string()
                 });
             }
             // process last cell
-            let cell = col.last().unwrap();
-            display_col.push(if cell.is_used() {
-                cell.try_into_used()
-                    .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-                    .and_then(|color| Ok(" ".on_color(color)))
-                    .unwrap()
-                    .to_string()
-            } else {
-                " ".to_string()
-            });
+            if let Some(&cell) = col.last() {
+                display_col.push(slot_to_colored(cell));
+            }
             // end by bottom border
             display_col.push("─".to_string());
             // and finish the column !
             display_vec.push(display_col);
         }
-        // create each 'edge' columns
-        let mut col_iter = array.columns().into_iter().enumerate().peekable();
+        display_vec
+    }
+
+    fn insert_edges(&self, display_vec: &mut Vec<Vec<String>>) {
+        let mut col_iter = (&self.parray.array)
+            .columns()
+            .into_iter()
+            .enumerate()
+            .peekable();
         while let Some((n, column)) = col_iter.next() {
             // n is the number of 'edge' columns that we have processed
             if let Some((_, n_column)) = col_iter.peek() {
@@ -308,6 +301,9 @@ impl PuzzleDisplay {
                 display_vec.insert(2 * n + 1, display_col);
             }
         }
+    }
+
+    fn display_create(&self, display_vec: Vec<Vec<String>>) -> String {
         // create display, line by line, we need to work by rows this time.
         let mut display = String::new();
         // add the first & last characters manually, as they correspond to the left & right border of the table.
@@ -349,9 +345,7 @@ impl PuzzleDisplay {
             line.push('\n');
             display.push_str(&line);
         }
-
-        self.display_create_footer(&mut display);
-        format!("{}", display)
+        display
     }
 
     fn display_create_footer(&self, display: &mut String) {
@@ -361,6 +355,18 @@ impl PuzzleDisplay {
             let piece_name = format!("{}: '{}'\n", index_colored.to_string(), &piece.name());
             display.push_str(&piece_name);
         }
+    }
+}
+
+fn slot_to_colored(cell: SlotStatus) -> String {
+    if cell.is_used() {
+        cell.try_into_used()
+            .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
+            .and_then(|color| Ok(" ".on_color(color)))
+            .unwrap()
+            .to_string()
+    } else {
+        " ".to_string()
     }
 }
 
