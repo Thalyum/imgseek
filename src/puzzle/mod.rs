@@ -97,7 +97,7 @@ pub struct PuzzleDisplay {
 }
 
 impl PuzzleDisplay {
-    pub fn new(image_size: u64) -> PuzzleDisplay {
+    pub fn new(image_size: u64, v_scale: Option<&str>, h_scale: Option<&str>) -> PuzzleDisplay {
         let parray = PieceArray::new(image_size);
 
         let corner_set: [Corner; 11] = [
@@ -121,8 +121,16 @@ impl PuzzleDisplay {
         PuzzleDisplay {
             pieces: Vec::<PuzzlePiece>::new(),
             parray,
-            horizontal_scale: Scaling::Dynamic,
-            vertical_scale: Scaling::Dynamic,
+            horizontal_scale: if let Some(s) = h_scale {
+                Scaling::Fixed(s.parse::<usize>().unwrap())
+            } else {
+                Scaling::Dynamic
+            },
+            vertical_scale: if let Some(s) = v_scale {
+                Scaling::Fixed(s.parse::<usize>().unwrap())
+            } else {
+                Scaling::Dynamic
+            },
             corner_set,
         }
     }

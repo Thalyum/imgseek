@@ -37,4 +37,16 @@ pub fn build_cli() -> App<'static, 'static> {
                 .default_value("512")
                 .help("Page / block size"),
         )
+        .arg(
+            Arg::with_name("v_scale")
+                .long("v_scale")
+                .takes_value(true)
+                .help("Vertical scaling, default is half of the term size"),
+        )
+        .arg(
+            Arg::with_name("h_scale")
+                .long("h_scale")
+                .takes_value(true)
+                .help("Horizontal scaling, default is half of the term size"),
+        )
 }
