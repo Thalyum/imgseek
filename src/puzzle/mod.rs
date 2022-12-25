@@ -317,8 +317,10 @@ impl From<SlotStatus> for String {
     fn from(src: SlotStatus) -> Self {
         if src.is_used() {
             src.try_into_used()
-                .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-                .and_then(|color| Ok(" ".on_color(color)))
+                .and_then(|index| {
+                    let color = COLOR_LIST[index % COLOR_LIST.len()];
+                    Ok(index.to_string().color("black").on_color(color))
+                })
                 .unwrap()
                 .to_string()
         } else {
