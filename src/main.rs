@@ -39,13 +39,16 @@ fn main() -> anyhow::Result<()> {
             let s = format!("➜ '{}' not found in '{}'...", binary_name, flash_img);
             println!("{}", s.bold());
             continue;
-        }
-        let file_size = fs::metadata(&binary_name)?.len().try_into()?;
+        } else {
+            let s = format!("➜ '{}' found in '{}':", binary_name, flash_img);
+            println!("{}", s.bold());
 
-        for offset in valid_offsets.iter() {
-            let p = PuzzlePiece::new(binary_name.to_owned(), file_size, *offset);
-
-            puzzle.add_element(p)?;
+            let file_size = fs::metadata(&binary_name)?.len().try_into()?;
+            for offset in valid_offsets.iter() {
+                println!("\tfrom {:#010x} to {:#010x}", offset, offset + file_size);
+                let p = PuzzlePiece::new(binary_name.to_owned(), file_size, *offset);
+                puzzle.add_element(p)?;
+            }
         }
     }
 
