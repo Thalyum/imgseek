@@ -52,8 +52,7 @@ pub struct PuzzleDisplay {
     pieces: Vec<PuzzlePiece>,
     parray: PieceArray,
     horizontal_scale: usize,
-    // TODO: add height multiplier
-    // vertical_scale: usize,
+    vertical_scale: usize,
     corner_set: [Corner; 11],
 }
 
@@ -83,6 +82,7 @@ impl PuzzleDisplay {
             pieces: Vec::<PuzzlePiece>::new(),
             parray,
             horizontal_scale: 4,
+            vertical_scale: 2,
             corner_set,
         }
     }
@@ -248,7 +248,13 @@ impl PuzzleDisplay {
                 line.push_str(&format!(" <-- {:#08x}", self.parray.offset_list[n / 2]));
             }
             line.push('\n');
-            display.push_str(&line);
+            if n % 2 == 1 {
+                for _ in 0..self.vertical_scale {
+                    display.push_str(&line);
+                }
+            } else {
+                display.push_str(&line);
+            }
         }
         display
     }
