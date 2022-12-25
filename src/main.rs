@@ -23,11 +23,14 @@ fn main() -> anyhow::Result<()> {
     // argument with default value
     let bsize = matches.value_of("bsize").unwrap();
     let bsize: usize = bsize.parse::<usize>()?;
+    // optional arguments
+    let v_scale = matches.value_of("v_scale");
+    let h_scale = matches.value_of("h_scale");
 
     let flash_hash_table = process_flash_img(flash_img, bsize)?;
     let flash_img_size = fs::metadata(flash_img)?.len();
 
-    let mut puzzle = PuzzleDisplay::new(flash_img_size);
+    let mut puzzle = PuzzleDisplay::new(flash_img_size, v_scale, h_scale);
 
     for binary_name in bin_list {
         let valid_offsets = seek_image(&flash_hash_table, &binary_name, bsize)?;

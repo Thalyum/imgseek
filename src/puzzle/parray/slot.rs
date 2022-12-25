@@ -10,7 +10,7 @@ use std::{
     ops::{Add, AddAssign, BitXor, Div, Mul, MulAssign, Sub},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlotStatus {
     Free,
     Identity,
@@ -32,6 +32,14 @@ impl SlotStatus {
     #[must_use]
     pub fn is_used(&self) -> bool {
         matches!(self, Self::Used(_))
+    }
+
+    pub fn try_into_used(self) -> Result<usize, Self> {
+        if let Self::Used(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
     }
 }
 
