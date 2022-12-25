@@ -48,11 +48,51 @@ impl PuzzlePiece {
 const COLOR_LIST: [&str; 7] = ["red", "green", "yellow", "blue", "magenta", "cyan", "white"];
 
 #[derive(Debug)]
+enum Scaling {
+    Dynamic,
+    Fixed(usize),
+}
+
+impl Scaling {
+    fn get_v_scale(&self, display: &PuzzleDisplay) -> usize {
+        match self {
+            Scaling::Dynamic => {
+                let (_, term_h) = term_size::dimensions().unwrap();
+                let table_h = display.parray.array.nrows();
+                // (table_h + 1) + (table_h * scale) + footer = target_height
+                // table_h * (scale + 1) + 1 + n_image = term_h / 2
+                // scale = (term_h / 2 - 1 - n_image) / table_h - 1
+                // FIXME: may fail if not enough space in terminal
+                let scale = (term_h / 2 - 1 - display.pieces.len()) / table_h - 1;
+                std::cmp::max(scale, 1)
+            }
+            Scaling::Fixed(scale) => *scale,
+        }
+    }
+
+    fn get_h_scale(&self, display: &PuzzleDisplay) -> usize {
+        match self {
+            Scaling::Dynamic => {
+                let (term_w, _) = term_size::dimensions().unwrap();
+                let table_w = display.parray.array.ncols();
+                // (table_w + 1) + (table_w * scale) + offset_hint = target_width
+                // table_w * (scale + 1) + 1 + 15 = term_w / 2
+                // scale = (term_w / 2 - 16) / table_w - 1
+                // FIXME: may fail if not enough space in terminal
+                let scale = (term_w / 2 - 16) / table_w - 1;
+                std::cmp::max(scale, 1)
+            }
+            Scaling::Fixed(scale) => *scale,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct PuzzleDisplay {
     pieces: Vec<PuzzlePiece>,
     parray: PieceArray,
-    horizontal_scale: usize,
-    vertical_scale: usize,
+    horizontal_scale: Scaling,
+    vertical_scale: Scaling,
     corner_set: [Corner; 11],
 }
 
@@ -81,8 +121,8 @@ impl PuzzleDisplay {
         PuzzleDisplay {
             pieces: Vec::<PuzzlePiece>::new(),
             parray,
-            horizontal_scale: 4,
-            vertical_scale: 2,
+            horizontal_scale: Scaling::Dynamic,
+            vertical_scale: Scaling::Dynamic,
             corner_set,
         }
     }
@@ -98,12 +138,6 @@ impl PuzzleDisplay {
     }
 
     pub fn display(&self) -> String {
-        // let (term_w, term_h) = term_size::dimensions().unwrap();
-        // let table_w = self.parray.array.ncols();
-        // let table_h = self.parray.array.nrows();
-
-        // let display_w = std::cmp::min(term_w, table_w);
-        // let display_h = std::cmp::min(term_h, table_h);
         let mut display_vec = self.process_columns();
         // create each 'edge' columns
         self.insert_edges(&mut display_vec);
@@ -223,7 +257,7 @@ impl PuzzleDisplay {
             // add the row content
             for (n, s) in row.iter().enumerate() {
                 if n % 2 == 0 {
-                    for _ in 0..self.horizontal_scale {
+                    for _ in 0..self.horizontal_scale.get_h_scale(&self) {
                         line.push_str(&s);
                     }
                 } else {
@@ -241,11 +275,11 @@ impl PuzzleDisplay {
                 line.push('│');
             }
             if n % 2 == 0 {
-                line.push_str(&format!(" <-- {:#08x}", self.parray.offset_list[n / 2]));
+                line.push_str(&format!(" <-- {:#010x}", self.parray.offset_list[n / 2]));
             }
             line.push('\n');
             if n % 2 == 1 {
-                for _ in 0..self.vertical_scale {
+                for _ in 0..self.vertical_scale.get_v_scale(&self) {
                     display.push_str(&line);
                 }
             } else {
