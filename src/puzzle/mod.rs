@@ -169,18 +169,18 @@ impl PuzzleDisplay {
             for win in col.windows(2) {
                 // process cell
                 let cell = win[0];
-                display_col.push(slot_to_colored(cell));
+                display_col.push(cell.into());
                 // process cell transition
                 let n_cell = win[1];
                 display_col.push(if cell == n_cell {
-                    slot_to_colored(cell)
+                    cell.into()
                 } else {
                     "─".to_string()
                 });
             }
             // process last cell
             if let Some(&cell) = col.last() {
-                display_col.push(slot_to_colored(cell));
+                display_col.push(cell.into());
             }
             // end by bottom border
             display_col.push("─".to_string());
@@ -302,20 +302,24 @@ impl PuzzleDisplay {
             let color = COLOR_LIST[index % COLOR_LIST.len()];
             let index_colored = index.to_string().color("black").on_color(color);
             let piece_name = format!("{}: '{}'\n", index_colored.to_string(), &piece.name());
+            // TODO: add list of offsets
+            // TODO: maybe add a 'simple' print mode, to only display the footer without schema
             display.push_str(&piece_name);
         }
     }
 }
 
-fn slot_to_colored(cell: SlotStatus) -> String {
-    if cell.is_used() {
-        cell.try_into_used()
-            .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
-            .and_then(|color| Ok(" ".on_color(color)))
-            .unwrap()
-            .to_string()
-    } else {
-        " ".to_string()
+impl From<SlotStatus> for String {
+    fn from(src: SlotStatus) -> Self {
+        if src.is_used() {
+            src.try_into_used()
+                .and_then(|index| Ok(COLOR_LIST[index % COLOR_LIST.len()]))
+                .and_then(|color| Ok(" ".on_color(color)))
+                .unwrap()
+                .to_string()
+        } else {
+            " ".to_string()
+        }
     }
 }
 
