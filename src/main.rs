@@ -43,7 +43,9 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    println!("{}", puzzle);
+    if !puzzle.is_empty() {
+        println!("{}", puzzle);
+    }
 
     Ok(())
 }

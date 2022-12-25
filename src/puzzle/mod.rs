@@ -135,6 +135,10 @@ impl PuzzleDisplay {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.pieces.is_empty()
+    }
+
     pub fn add_element(&mut self, new_piece: PuzzlePiece) -> Result<()> {
         let start_addr = new_piece.start();
         let end_addr = start_addr + new_piece.len();
