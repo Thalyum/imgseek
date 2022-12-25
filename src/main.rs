@@ -10,6 +10,7 @@ mod error;
 mod flash_img_seeker;
 mod puzzle;
 
+use colored::Colorize;
 use flash_img_seeker::{process_flash_img, seek_image};
 use puzzle::{PuzzleDisplay, PuzzlePiece};
 use std::{convert::TryInto, fs};
@@ -34,6 +35,11 @@ fn main() -> anyhow::Result<()> {
 
     for binary_name in bin_list {
         let valid_offsets = seek_image(&flash_hash_table, &binary_name, bsize)?;
+        if valid_offsets.is_empty() {
+            let s = format!("➜ '{}' not found in '{}'...", binary_name, flash_img);
+            println!("{}", s.bold());
+            continue;
+        }
         let file_size = fs::metadata(&binary_name)?.len().try_into()?;
 
         for offset in valid_offsets.iter() {
