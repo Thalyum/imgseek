@@ -13,6 +13,8 @@ mod puzzle;
 use colored::Colorize;
 use flash_img_seeker::{process_flash_img, seek_image};
 use puzzle::{PuzzleDisplay, PuzzlePiece};
+#[cfg(debug_assertions)]
+use std::time::Instant;
 use std::{convert::TryInto, fs};
 
 fn main() -> anyhow::Result<()> {
@@ -28,8 +30,18 @@ fn main() -> anyhow::Result<()> {
     let v_scale = matches.value_of("v_scale");
     let h_scale = matches.value_of("h_scale");
 
+    #[cfg(debug_assertions)]
+    let mut now = Instant::now();
+
     let flash_hash_table = process_flash_img(flash_img, bsize)?;
     let flash_img_size = fs::metadata(flash_img)?.len();
+
+    #[cfg(debug_assertions)]
+    {
+        let elapsed = now.elapsed();
+        println!("Flash image processed: {:.2?}", elapsed);
+        now = Instant::now();
+    }
 
     let mut puzzle = PuzzleDisplay::new(flash_img_size, v_scale, h_scale);
 
@@ -52,8 +64,20 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
+    #[cfg(debug_assertions)]
+    {
+        let elapsed = now.elapsed();
+        println!("All binaries processed: {:.2?}", elapsed);
+        now = Instant::now();
+    }
+
     if !puzzle.is_empty() {
         println!("{}", puzzle);
+        #[cfg(debug_assertions)]
+        {
+            let elapsed = now.elapsed();
+            println!("Schema displayed: {:.2?}", elapsed);
+        }
     }
 
     Ok(())
