@@ -11,7 +11,7 @@ mod flash_img_seeker;
 mod puzzle;
 
 use colored::Colorize;
-use flash_img_seeker::{seek_image, FlashImage};
+use flash_img_seeker::FlashImage;
 use puzzle::{PuzzleDisplay, PuzzlePiece};
 #[cfg(debug_assertions)]
 use std::time::Instant;
@@ -45,7 +45,7 @@ fn main() -> anyhow::Result<()> {
     let mut puzzle = PuzzleDisplay::new(&flash_image, v_scale, h_scale);
 
     for binary_name in bin_list {
-        let valid_offsets = seek_image(&flash_image, &binary_name, bsize)?;
+        let valid_offsets = flash_image.seek_image(&binary_name, bsize)?;
         if valid_offsets.is_empty() {
             let s = format!("➜ '{}' not found in '{}'...", binary_name, flash_img);
             println!("{}", s.bold());

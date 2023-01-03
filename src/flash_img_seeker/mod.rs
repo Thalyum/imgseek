@@ -128,20 +128,6 @@ fn locate_image_in_table(
     found
 }
 
-pub fn seek_image<P: AsRef<Path>>(
-    flash_image: &FlashImage,
-    image_path: P,
-    block_size: usize,
-) -> Result<Vec<usize>> {
-    let bin_file = File::open(image_path)?;
-
-    let image_hash_table = compute_hash_by_block(&bin_file, block_size)?;
-
-    let found = locate_image_in_table(&flash_image.table, &image_hash_table);
-
-    Ok(found)
-}
-
 pub struct FlashImage {
     table: Vec<ImgHashTable>,
     size: u64,
@@ -161,5 +147,19 @@ impl FlashImage {
 
     pub fn size(&self) -> u64 {
         self.size
+    }
+
+    pub fn seek_image<P: AsRef<Path>>(
+        &self,
+        image_path: P,
+        block_size: usize,
+    ) -> Result<Vec<usize>> {
+        let bin_file = File::open(image_path)?;
+
+        let image_hash_table = compute_hash_by_block(&bin_file, block_size)?;
+
+        let found = locate_image_in_table(&self.table, &image_hash_table);
+
+        Ok(found)
     }
 }
