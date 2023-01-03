@@ -8,7 +8,7 @@ mod corner;
 mod dynzip;
 mod parray;
 
-use crate::error::*;
+use crate::{error::*, flash_img_seeker::FlashImage};
 use colored::Colorize;
 use corner::{ClockWiseSlots, Corner};
 use dynzip::DynamicZip;
@@ -97,8 +97,12 @@ pub struct PuzzleDisplay {
 }
 
 impl PuzzleDisplay {
-    pub fn new(image_size: u64, v_scale: Option<&str>, h_scale: Option<&str>) -> PuzzleDisplay {
-        let parray = PieceArray::new(image_size);
+    pub fn new(
+        flash_image: &FlashImage,
+        v_scale: Option<&str>,
+        h_scale: Option<&str>,
+    ) -> PuzzleDisplay {
+        let parray = PieceArray::new(flash_image.size());
 
         let corner_set: [Corner; 11] = [
             Corner::new(' '),
