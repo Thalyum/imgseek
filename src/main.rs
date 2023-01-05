@@ -15,17 +15,26 @@ use flash_img_seeker::FlashImage;
 use puzzle::{PuzzleDisplay, PuzzlePiece};
 #[cfg(debug_assertions)]
 use std::time::Instant;
-use std::{convert::TryInto, fs};
+use std::{
+    convert::TryInto,
+    fs, panic,
+    sync::{Arc, Mutex},
+    thread,
+};
 
 fn main() -> anyhow::Result<()> {
     let matches = cli::build_cli().get_matches();
 
     // mandatory arguments
     let flash_img = matches.value_of("flash_image").unwrap();
-    let bin_list = matches.values_of("binaries_list").unwrap();
+    let bin_list: Vec<Arc<_>> = matches
+        .values_of("binaries_list")
+        .unwrap()
+        .into_iter()
+        .map(|s| Arc::new(s.to_string()))
+        .collect();
     // argument with default value
-    let bsize = matches.value_of("bsize").unwrap();
-    let bsize: usize = bsize.parse::<usize>()?;
+    let bsize: usize = matches.value_of("bsize").unwrap().parse::<usize>()?;
     // optional arguments
     let v_scale = matches.value_of("v_scale");
     let h_scale = matches.value_of("h_scale");
@@ -33,8 +42,8 @@ fn main() -> anyhow::Result<()> {
     #[cfg(debug_assertions)]
     let mut now = Instant::now();
 
-    let flash_image = FlashImage::new(flash_img, bsize)?;
-
+    // RO thread-shared structure
+    let flash_image = Arc::new(FlashImage::new(flash_img, bsize)?);
     #[cfg(debug_assertions)]
     {
         let elapsed = now.elapsed();
@@ -42,27 +51,60 @@ fn main() -> anyhow::Result<()> {
         now = Instant::now();
     }
 
-    let mut puzzle = PuzzleDisplay::new(&flash_image, v_scale, h_scale);
+    // create a mutable thread-shared PuzzleDisplay
+    let puzzle = Arc::new(Mutex::new(PuzzleDisplay::new(
+        &flash_image,
+        v_scale,
+        h_scale,
+    )));
+
+    // thread 'pool'
+    let mut threads: Vec<_> = Vec::new();
 
     for binary_name in bin_list {
-        let valid_offsets = flash_image.seek_image(&binary_name, bsize)?;
-        if valid_offsets.is_empty() {
-            let s = format!("➜ '{}' not found in '{}'...", binary_name, flash_img);
-            println!("{}", s.bold());
-            continue;
-        } else {
-            let s = format!("➜ '{}' found in '{}':", binary_name, flash_img);
-            println!("{}", s.bold());
+        // clone shared references
+        let binary_name = Arc::clone(&binary_name);
+        let flash_image: Arc<FlashImage> = Arc::clone(&flash_image);
+        let puzzle = Arc::clone(&puzzle);
+        // here is the thread
+        let handle = thread::spawn(move || -> thread::Result<()> {
+            println!("DBG: thread spawned for {}", binary_name);
+            let valid_offsets = flash_image.seek_image(&*binary_name, bsize).unwrap();
+            if valid_offsets.is_empty() {
+                let s = format!("➜ '{}' not found in flash image...", binary_name);
+                println!("{}", s.bold());
+            } else {
+                // FIXME: format one string beforehand, then print it in one go
+                // otherwise the print of various threads may be mixed
+                let s = format!("➜ '{}' found in flash image:", binary_name);
+                println!("{}", s.bold());
 
-            let file_size = fs::metadata(&binary_name)?.len().try_into()?;
-            for offset in valid_offsets.iter() {
-                println!("\tfrom {:#010x} to {:#010x}", offset, offset + file_size);
-                let p = PuzzlePiece::new(binary_name.to_owned(), file_size, *offset);
-                puzzle.add_element(p)?;
-            }
-        }
+                // FIXME: replaced '?' by 'unwrap()' because was unable to transform
+                // custom Error into thread::Error
+                // TODO: use anyhow::Error everywhere instead of thiserror
+                let file_size = fs::metadata(&*binary_name)
+                    .unwrap()
+                    .len()
+                    .try_into()
+                    .unwrap();
+                for offset in valid_offsets.iter() {
+                    println!("\tfrom {:#010x} to {:#010x}", offset, offset + file_size);
+                    let p = PuzzlePiece::new(binary_name.to_string(), file_size, *offset);
+                    puzzle.lock().unwrap().add_element(p).unwrap();
+                }
+            };
+            println!("DGB: thread finished for {}", binary_name);
+            Ok(())
+        });
+        threads.push(handle);
     }
 
+    // Join every thread in the pool: find every binaries
+    for handle in threads.into_iter() {
+        if let Err(e) = handle.join().unwrap() {
+            panic::resume_unwind(e);
+        }
+    }
     #[cfg(debug_assertions)]
     {
         let elapsed = now.elapsed();
@@ -70,8 +112,9 @@ fn main() -> anyhow::Result<()> {
         now = Instant::now();
     }
 
-    if !puzzle.is_empty() {
-        println!("{}", puzzle);
+    // display the flash layout
+    if !puzzle.lock().unwrap().is_empty() {
+        println!("{}", puzzle.lock().unwrap());
         #[cfg(debug_assertions)]
         {
             let elapsed = now.elapsed();
