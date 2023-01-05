@@ -27,12 +27,7 @@ fn main() -> anyhow::Result<()> {
 
     // mandatory arguments
     let flash_img = matches.value_of("flash_image").unwrap();
-    let bin_list: Vec<Arc<_>> = matches
-        .values_of("binaries_list")
-        .unwrap()
-        .into_iter()
-        .map(|s| Arc::new(s.to_string()))
-        .collect();
+    let bin_list = matches.values_of("binaries_list").unwrap();
     // argument with default value
     let bsize: usize = matches.value_of("bsize").unwrap().parse::<usize>()?;
     // optional arguments
@@ -62,8 +57,8 @@ fn main() -> anyhow::Result<()> {
     let mut threads: Vec<_> = Vec::new();
 
     for binary_name in bin_list {
+        let binary_name = binary_name.to_string();
         // clone shared references
-        let binary_name = Arc::clone(&binary_name);
         let flash_image: Arc<FlashImage> = Arc::clone(&flash_image);
         let puzzle = Arc::clone(&puzzle);
         // here is the thread
