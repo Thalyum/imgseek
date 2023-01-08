@@ -69,10 +69,9 @@ fn main() -> anyhow::Result<()> {
                 let s = format!("➜ '{}' not found in flash image...", binary_name);
                 println!("{}", s.bold());
             } else {
-                // FIXME: format one string beforehand, then print it in one go
-                // otherwise the print of various threads may be mixed
-                let s = format!("➜ '{}' found in flash image:", binary_name);
-                println!("{}", s.bold());
+                let mut s = format!("➜ '{}' found in flash image:\n", binary_name)
+                    .bold()
+                    .to_string();
 
                 // FIXME: replaced '?' by 'unwrap()' because was unable to transform
                 // custom Error into thread::Error
@@ -83,10 +82,15 @@ fn main() -> anyhow::Result<()> {
                     .try_into()
                     .unwrap();
                 for offset in valid_offsets.iter() {
-                    println!("\tfrom {:#010x} to {:#010x}", offset, offset + file_size);
+                    s.push_str(&format!(
+                        "\tfrom {:#010x} to {:#010x}\n",
+                        offset,
+                        offset + file_size
+                    ));
                     let p = PuzzlePiece::new(binary_name.to_string(), file_size, *offset);
                     puzzle.lock().unwrap().add_element(p).unwrap();
                 }
+                print!("{}", s);
             };
             println!("DGB: thread finished for {}", binary_name);
             Ok(())
