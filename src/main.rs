@@ -63,9 +63,6 @@ fn main() -> anyhow::Result<()> {
         let puzzle = Arc::clone(&puzzle);
         // here is the thread
         let handle = thread::spawn(move || -> thread::Result<()> {
-            #[cfg(debug_assertions)]
-            println!("DBG: thread spawned for {}", binary_name);
-
             let valid_offsets = flash_image.seek_image(&*binary_name, bsize).unwrap();
             if valid_offsets.is_empty() {
                 let s = format!("➜ '{}' not found in flash image...", binary_name);
@@ -94,9 +91,6 @@ fn main() -> anyhow::Result<()> {
                 }
                 print!("{}", s);
             };
-
-            #[cfg(debug_assertions)]
-            println!("DBG: thread finished for {}", binary_name);
 
             Ok(())
         });
