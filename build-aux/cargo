@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# flash-img-seeker - Insert description here
+# imgseek - Insert description here
 #
 # Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 #
@@ -21,4 +21,4 @@ subprocess.check_call(args, env=dict(os.environ,
                                      CARGO_HOME=os.path.join(srcdir, 'target',
                                                              'cargo-home')))
 
-shutil.copy(os.path.join(srcdir, 'target', mode, 'flash-img-seeker'), destdir)
+shutil.copy(os.path.join(srcdir, 'target', mode, 'imgseek'), destdir)

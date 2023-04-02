@@ -1,5 +1,5 @@
 //
-// This file is part of flash-img-seeker
+// This file is part of imgseek
 //
 // Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 //
@@ -8,7 +8,7 @@
 use clap::{crate_authors, crate_description, crate_version, App, Arg};
 
 pub fn build_cli() -> App<'static, 'static> {
-    App::new("flash-img-seeker")
+    App::new("imgseek")
         .version(crate_version!())
         .about(crate_description!())
         .author(crate_authors!())

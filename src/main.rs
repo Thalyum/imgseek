@@ -1,5 +1,5 @@
 //
-// This file is part of flash-img-seeker
+// This file is part of imgseek
 //
 // Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 //
@@ -7,12 +7,12 @@
 
 mod cli;
 mod error;
-mod flash_img_seeker;
 mod puzzle;
+mod seeker;
 
 use colored::Colorize;
-use flash_img_seeker::FlashImage;
 use puzzle::{PuzzleDisplay, PuzzlePiece};
+use seeker::FlashImage;
 #[cfg(debug_assertions)]
 use std::time::Instant;
 use std::{

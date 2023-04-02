@@ -1,14 +1,14 @@
-% flash-img-seeker(1)
+% imgseek(1)
 % Paul-Erwan RIO <paulerwan.rio@proton.me>
 % September 19, 2022
 
 # NAME
 
-flash-img-seeker - Insert description here
+imgseek - Insert description here
 
 # SYNOPSIS
 
- flash-img-seeker [*OPTIONS*]
+ imgseek [*OPTIONS*]
 
 # DESCRIPTION
 

@@ -1,5 +1,5 @@
 //
-// This file is part of flash-img-seeker
+// This file is part of imgseek
 //
 // Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 //
@@ -8,7 +8,7 @@ mod corner;
 mod dynzip;
 mod parray;
 
-use crate::{error::*, flash_img_seeker::FlashImage};
+use crate::{error::*, seeker::FlashImage};
 use colored::Colorize;
 use corner::{ClockWiseSlots, Corner};
 use dynzip::DynamicZip;

@@ -1,5 +1,5 @@
 [package]
-name = "flash-img-seeker"
+name = "imgseek"
 edition = "2021"
 version = "0.1.1"
 authors = ["Paul-Erwan RIO <paulerwan.rio@proton.me>"]

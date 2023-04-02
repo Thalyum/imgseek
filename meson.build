@@ -1,11 +1,11 @@
 #
-# flash-img-seeker - Insert description here
+# imgseek - Insert description here
 #
 # Copyright (C) 2022 Paul-Erwan RIO <paulerwan.rio@proton.me>
 #
 #
 
-project('flash-img-seeker', 'rust',
+project('imgseek', 'rust',
         version : '0.1.1',
         license : '',
         default_options : [
@@ -41,10 +41,10 @@ cargo = find_program('cargo')
 cargo_vendor = find_program('cargo-vendor', required: false)
 cargo_wrapper = find_program('build-aux/cargo')
 
-program = custom_target('flash-img-seeker',
+program = custom_target('imgseek',
                         build_by_default: true,
                         console: true,
-                        output: ['flash-img-seeker'],
+                        output: ['imgseek'],
                         install: true,
                         install_dir: bindir,
                         command: [cargo_wrapper,

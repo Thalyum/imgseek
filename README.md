@@ -1,4 +1,4 @@
-# flash-img-seeker
+# imgseek
 
 Tool to find and search a list of binaries inside a flash storage dump image. In
 fact, this can be used to search any binary into another binary, but was
@@ -19,19 +19,19 @@ Cargo build --release
 ```
 To build the release version. Then install it to you preferred location:
 ```sh
-cp target/release/flash-img-seeker ~/.cargo/bin
+cp target/release/imgseek ~/.cargo/bin
 ```
 
 ## Usage
 
 Here is the extract of the help message
 ```
-flash-img-seeker 0.1.1
+imgseek 0.1.1
 Paul-Erwan RIO <paulerwan.rio@proton.me>
 Seeker tool for binaries in flash images
 
 USAGE:
-    flash-img-seeker [OPTIONS] --binaries <binaries_list>... --image <flash_image>
+    imgseek [OPTIONS] --binaries <binaries_list>... --image <flash_image>
 
 FLAGS:
     -h, --help       Prints help information
@@ -47,7 +47,7 @@ OPTIONS:
 
 Example:
 ```sh
-flash-img-seeker --image total_image --binaries image1 image2
+imgseek --image total_image --binaries image1 image2
 ```
 
 Here is a quick example. First create a dummy flash image
@@ -61,7 +61,7 @@ dd if=total_image of=image2 bs=512 skip=5 count=1
 ```
 Then run:
 ```sh
-flash-img-seeker --image total_image --binaries image1 image2
+imgseek --image total_image --binaries image1 image2
 ```
 
 Output:
